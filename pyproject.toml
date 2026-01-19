@@ -1,0 +1,26 @@
+[project]
+name = "bcn-scraper"
+version = "0.1.0"
+description = "Python clients for Historia de la Ley and legislative sources"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+  {name = "CENIA"}
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
+]
+dependencies = [
+  "beautifulsoup4>=4.11"
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+dataframe = ["pandas>=1.5"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["src"]

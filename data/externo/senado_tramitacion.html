@@ -1,0 +1,1586 @@
+<!DOCTYPE HTML>
+<input name="boletin_ini" id="boletin_ini" type="hidden" value="">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+
+<!--<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7"/>-->
+
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<!-- responsive -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Senado - Tramitaci&oacute;n de proyectos</title>
+<meta name="keywords" content="" />
+<meta name="description" content="" />
+<meta property="og:url"           content="http://www.senado.cl/appsenado/templates/tramitacion/index.php" />
+<meta property="og:type"          content="website-apk" />
+<meta property="og:title"         content="Senado - Tramitaci&oacute;n de proyectos" />
+<meta property="og:description"   content="En este lugar encontraras todos los tramites de proyectos tratados." />
+<meta property="og:image"         content="/appsenado/templates/tramitacion/images/senado.jpg" />
+
+<link href="css/estilos.css" rel="stylesheet" type="text/css" />
+
+<!--css Grid-->
+<link rel="stylesheet" type="text/css" href="/appsenado/includes/dhtmlx_v36/common/common_imgs/dhtmlx.css">
+<link rel="stylesheet" type="text/css" href="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/dhtmlxgrid.css">
+<link rel="stylesheet" type="text/css" href="/appsenado/includes/dhtmlx_v36/dhtmlxCombo/codebase/dhtmlxcombo.css">
+<link type="text/css" rel="stylesheet" href="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/skins/dhtmlxgrid_dhx_skyblue.css">
+<link type="text/css" rel="stylesheet" href="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/ext/dhtmlxgrid_pgn_bricks.css">
+
+<!--css Windows-->
+<link rel="stylesheet" type="text/css" href="/appsenado/includes/dhtmlx_v36/dhtmlxWindows/codebase/dhtmlxwindows.css">
+<link rel="stylesheet" type="text/css" href="/appsenado/includes/dhtmlx_v36/dhtmlxWindows/codebase/skins/dhtmlxwindows_dhx_skyblue.css">
+
+<!--css Toolbar-->
+<link rel="stylesheet" type="text/css" href="/appsenado/includes/dhtmlx_v36/dhtmlxToolbar/codebase/skins/dhtmlxtoolbar_dhx_web.css">
+<link rel="stylesheet" type="text/css" href="/appsenado/includes/dhtmlx_v36/dhtmlxToolbar/codebase/skins/dhtmlxtoolbar_dhx_blue.css">
+
+<!--css TabBar-->
+<link rel="stylesheet" type="text/css" href="/appsenado/includes/dhtmlx_v36/dhtmlxTabbar/codebase/dhtmlxtabbar.css">
+
+<!--css Calendar-->
+
+<link rel="stylesheet" type="text/css" href="/appsenado/includes/dhtmlx_v36/dhtmlxCalendar/codebase/dhtmlxcalendar.css">
+<link rel="stylesheet" type="text/css" href="/appsenado/includes/dhtmlx_v36/dhtmlxCalendar/codebase/skins/dhtmlxcalendar_dhx_skyblue.css">
+<style type="text/css">
+   .grid_hover {
+     background-color:#FFFFCC;
+     font-size:20px;
+   }
+   a.a1 {
+      color: #CC0000;
+      text-decoration: none;
+   }
+   a.a1:hover{
+      color: #FF0000;
+      text-decoration: underline;
+   }
+   .td_boletin{
+      color: #000099;
+   }
+
+   .td_boletin:hover{
+      color: #CC0000;
+      cursor: pointer;
+   }
+
+
+</style>
+
+<!--JS Comunes-->
+<script src="/appsenado/includes/jquery/jquery1124.js" type="text/javascript"></script>
+<script type='text/javascript' src="/appsenado/includes/jquery/jquery202.min.js"></script>
+<!-- bootstraps -->
+<link rel="stylesheet" href="/appsenado/includes/bootstrap-3.3.7-dist/css/bootstrap.min.css">
+<link href="/appsenado/includes/bootstrap-datepicker/css/bootstrap-datepicker161.css" rel="stylesheet"/>
+
+<script src="/appsenado/includes/bootstrap-3.3.7-dist/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/appsenado/includes/bootstrap-datepicker/js/bootstrap-datepicker161.min.js"></script>
+<!-- Calendario en español -->
+<script type="text/javascript" src="/appsenado/includes/bootstrap-datepicker/js/bootstrap-datepicker161.es.min.js"></script>
+
+<!-- BlockUi jquery plugin --->
+<script src="/appsenado/includes/jquery/blockUI/jquery.blockUI.js"></script>
+
+<!-- Jquery UI ---->
+<link rel="stylesheet" href="/appsenado/includes/jquery/ui/1.12.1/css/jquery-ui.css">
+<script src="/appsenado/includes/jquery/ui/1.12.1/js/jquery-ui.js"></script>
+
+<!-- Highcharts -->
+<!-- <script src="/appsenado/includes/highcharts/highcharts.js"></script> -->
+<!-- <script src="/appsenado/includes/highcharts/modules/exporting.js"></script> -->
+<!-- DataTables -->
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.15/css/jquery.dataTables.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/1.3.1/css/buttons.dataTables.min.css">
+<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.15/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/1.3.1/js/dataTables.buttons.min.js"></script>
+<script type="text/javascript" charset="utf8" src="//cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script type="text/javascript" charset="utf8" src="//cdn.rawgit.com/bpampuch/pdfmake/0.1.27/build/pdfmake.min.js"></script>
+<script type="text/javascript" charset="utf8" src="//cdn.rawgit.com/bpampuch/pdfmake/0.1.27/build/vfs_fonts.js"></script>
+<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/buttons/1.3.1/js/buttons.html5.min.js"></script>
+
+<!-- FBshare -->
+<!--
+<a name="fb_share"></a>
+-->
+<script src="https://facebook.com/connect.php/js/FB.Share" type="text/javascript"></script>
+
+<script src="/appsenado/includes/jquery/jquery.scrollTo.js" type="text/javascript"></script>
+<script src="/appsenado/includes/dhtmlx_v36/common/dhtmlxcommon.js"></script>
+<script src="/appsenado/includes/dhtmlx_v36/common/dhtmlxcontainer.js"></script>
+
+<!-- dhtmlxGrid -->
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/dhtmlxgrid.js" type="text/javascript"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/dhtmlxgridcell.js" type="text/javascript"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/excells/dhtmlxgrid_excell_link.js"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/excells/dhtmlxgrid_excell_sub_row.js"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/ext/dhtmlxgrid_filter.js"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/ext/dhtmlxgrid_ssc.js"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/ext/dhtmlxgrid_start.js"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/ext/dhtmlxgrid_pgn.js"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/ext/dhtmlxgrid_export.js"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxGrid/codebase/ext/dhtmlxgrid_nxml.js"></script>
+
+<!-- dhtmlxwindows -->
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxWindows/codebase/dhtmlxwindows.js"></script>
+
+<!-- dhtmlxCombo -->
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxCombo/codebase/dhtmlxcombo.js"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxCombo/codebase/ext/dhtmlxcombo_whp.js"></script>
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxCombo/codebase/ext/dhtmlxcombo_extra.js"></script>
+
+<!-- dhtmlxtoolbar -->
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxToolbar/codebase/dhtmlxtoolbar.js"></script>
+
+<!-- dhtmlxtabbar -->
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxTabbar/codebase/dhtmlxtabbar.js"></script>
+
+<!-- dhtmlxcalendar -->
+<script src="/appsenado/includes/dhtmlx_v36/dhtmlxCalendar/codebase/dhtmlxcalendar.js"></script>
+
+<!--Seteo de Calendario  -->
+<script language="JavaScript" src="./js/set_calendario.js" type="text/javascript"></script>
+
+<!-- Seteo nuevo calendario -->
+<script language="JavaScript" src="./js/moment.js" type="text/javascript"></script>
+<script language="JavaScript" type="text/javascript">
+//quitando el error
+
+jQuery("#error").hide();
+activo="otro";
+function modal(info){
+   if(info == 1) //Vista Proyectos iniciados
+   {
+        /*jQuery('.navbar-collapse').collapse('hide');*/
+        jQuery("#modalPIniciados").modal("show");
+        jQuery('.navbar-collapse').collapse('hide');
+        jQuery.fn.dataTable.ext.errMode = 'none';
+
+        //jQuery('#example').on( 'error.dt', function ( e, settings, techNote, message ) {
+        //console.log( 'An error has been reported by DataTables: ', message );
+        //} ) .DataTable();
+        var table = jQuery('#PIniciados').on( 'error.dt', function ( e, settings, techNote, message ) {
+            console.log( 'An error has been reported by DataTables: ', message );
+        }).DataTable({
+            responsive: true,
+            dom: 'Bfrtip',
+            buttons: [
+                'copy', 'csv', 'excel', 'pdf'
+            ],
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.15/i18n/Spanish.json"
+            }
+        });
+        
+        if(findBootstrapEnvironment()=="xs")
+        {
+            table.column(2).visible( false );
+            table.column(3).visible( false );
+            table.column(4).visible( false );
+            //table.column(5).visible( false );         
+        }
+        else if(findBootstrapEnvironment()=="md"||findBootstrapEnvironment()=="sm")
+        {
+            table.column(4).visible( false );        
+        }
+        else if(findBootstrapEnvironment()=="lg"){
+            
+        }
+        jQuery('#PIniciados tbody').on( 'click', 'tr', function ()
+        {
+            //console.log( table.row( this ).data() );
+            seleccionado=table.row( this ).data();
+            //console.log(seleccionado[0]);
+            jQuery("#contenido").show();
+            jQuery("#principal").hide();
+            //SE ESCONDE CONTENIDO DE BOLETIN POR SI REALIZA LA BUSQUEDA DESDE AHI
+            jQuery("#div_contenido").hide();
+            //SE ESCONDE CONTENIDO DE BOLETIN materia POR SI REALIZA LA BUSQUEDA DESDE AHI
+            jQuery("#boletin_materias").hide();
+            //SE ESCONDE CONTENIDO DE BOLETIN comision POR SI REALIZA LA BUSQUEDA DESDE AHI
+            jQuery("#boletin_comision").hide();
+            //SE ESCONDE CONTENIDO DE BOLETIN mocion(autor) POR SI REALIZA LA BUSQUEDA DESDE AHI
+            jQuery("#boletin_mocion").hide();
+            jQuery("#cifrasDos").show();
+            activo="boletin";
+            jQuery.growlUI('', 'Estamos realizando su consulta!');
+            boletin = seleccionado[0];
+            jQuery("#modalPIniciados").modal("hide");
+            //se remueve clase de modal por posibles errores
+            jQuery('body').removeClass('modal-open');
+            jQuery('.modal-backdrop').remove();
+            desde = 'boletin';
+            jQuery("#main").fadeOut('solw', function(){
+             jQuery("#mono").css('display','');
+             jQuery("#main2").load('/appsenado/templates/tramitacion/boletin_datos.html?etc='+ new Date().getTime(), function(){
+                jQuery("#main2").fadeIn('solw');
+                jQuery("#mono").css('display','none');
+                sw_cambio_menu = true;
+             });
+            });
+            //jQuery("#modalPIniciados").modal("hide");
+            //datos(seleccionado[0]);
+        } );
+
+   }
+   if(info == 2) //Vista Proyectos de Ley Despachados
+   {
+        jQuery("#modalPLDespachados").modal("show");
+        jQuery('.navbar-collapse').collapse('hide');
+        jQuery.fn.dataTable.ext.errMode = 'none';
+
+        //jQuery('#PLDespachados').on( 'error.dt', function ( e, settings, techNote, message ) {
+        //console.log( 'An error has been reported by DataTables: ', message );
+        //} ) .DataTable();
+        var table2 = jQuery('#PLDespachados').on( 'error.dt', function ( e, settings, techNote, message ) {
+            console.log( 'An error has been reported by DataTables: ', message );
+        }).DataTable({
+            responsive: true,
+            dom: 'Bfrtip',
+            buttons: [
+                'copy', 'csv', 'excel', 'pdf'
+            ],
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.15/i18n/Spanish.json"
+            }
+        });
+        
+        if(findBootstrapEnvironment()=="xs"){
+            table2.column(2).visible( false );
+            table2.column(3).visible( false );
+            table2.column(4).visible( false );
+            //table2.column(5).visible( false );
+        }else if(findBootstrapEnvironment()=="md"||findBootstrapEnvironment()=="sm"){
+            table2.column(4).visible( false );        
+        }else if(findBootstrapEnvironment()=="lg"){
+
+        }
+        jQuery('#PLDespachados tbody').on( 'click', 'tr', function () {
+            //console.log( table2.row( this ).data() );
+            seleccionado=table2.row( this ).data();
+            //console.log(seleccionado[0]);
+            jQuery("#contenido").show();
+            jQuery("#principal").hide();
+            //SE ESCONDE CONTENIDO DE BOLETIN POR SI REALIZA LA BUSQUEDA DESDE AHI
+            jQuery("#div_contenido").hide();
+            //SE ESCONDE CONTENIDO DE BOLETIN materia POR SI REALIZA LA BUSQUEDA DESDE AHI
+            jQuery("#boletin_materias").hide();
+            //SE ESCONDE CONTENIDO DE BOLETIN comision POR SI REALIZA LA BUSQUEDA DESDE AHI
+            jQuery("#boletin_comision").hide();
+            //SE ESCONDE CONTENIDO DE BOLETIN mocion(autor) POR SI REALIZA LA BUSQUEDA DESDE AHI
+            jQuery("#boletin_mocion").hide();
+            jQuery("#cifrasDos").show();
+            activo="boletin";
+            jQuery.growlUI('', 'Estamos realizando su consulta!');
+            boletin = seleccionado[0];
+            jQuery("#modalPLDespachados").modal("hide");
+            //se remueve clase de modal por posibles errores
+            jQuery('body').removeClass('modal-open');
+            jQuery('.modal-backdrop').remove();
+            desde = 'boletin';
+            jQuery("#main").fadeOut('solw', function(){
+             jQuery("#mono").css('display','');
+             jQuery("#main2").load('/appsenado/templates/tramitacion/boletin_datos.html?etc='+ new Date().getTime(), function(){
+                jQuery("#main2").fadeIn('solw');
+                jQuery("#mono").css('display','none');
+                sw_cambio_menu = true;
+             });
+            });
+            //jQuery("#modalPLDespachados").modal("hide");
+            //datos(seleccionado[0]);
+        } );
+   }
+   if(info == 3) //Vista Sesiones Celebradas
+   {
+        jQuery('.navbar-collapse').collapse('hide');
+        jQuery("#modalSCelebradas").modal("show");
+        jQuery.fn.dataTable.ext.errMode = 'none';
+
+        //jQuery('#SCelebradas').on( 'error.dt', function ( e, settings, techNote, message ) {
+        //console.log( 'An error has been reported by DataTables: ', message );
+        //} ) .DataTable();
+        var table3 = jQuery('#SCelebradas').on( 'error.dt', function ( e, settings, techNote, message ) {
+            console.log( 'An error has been reported by DataTables: ', message );
+        }).DataTable({
+            responsive: true,
+            dom: 'Bfrtip',
+            buttons: [
+                'copy', 'csv', 'excel', 'pdf'
+            ],
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.15/i18n/Spanish.json"
+            }
+        });
+   }
+}
+
+//Detectando tamaño pantalla y adaptando segun corresponda
+function findBootstrapEnvironment() {
+    var envs = ['xs', 'sm', 'md', 'lg'];
+
+    var $el = jQuery('<div>');
+    $el.appendTo(jQuery('body'));
+
+    for (var i = envs.length - 1; i >= 0; i--) {
+        var env = envs[i];
+
+        $el.addClass('hidden-'+env);
+        if ($el.is(':hidden')) {
+            $el.remove();
+            return env;
+        }
+    }
+}
+function cambio_menu(menu)
+{
+   destruye_objetos();
+   jQuery("#txtNumBoletin").val('');
+   jQuery("#main").empty();
+   jQuery("#main2").empty();
+   jQuery("#main3").empty();
+
+   jQuery("#main").css('display', 'none')
+   jQuery("#main2").css('display', 'none')
+   jQuery("#main3").css('display', 'none')
+   
+   //evitando errores de giro de pantalla y menu activado
+    jQuery("#menu100").removeClass('active');
+    jQuery("#menu101").removeClass('active');
+    jQuery("#menu102").removeClass('active');
+    jQuery("#menu103").removeClass('active');
+    jQuery("#menu700").removeClass('active');
+    jQuery("#menu701").removeClass('active');
+    jQuery("#menu2").removeClass('active');
+    jQuery("#menu3").removeClass('active');
+    jQuery("#menu4").removeClass('active');
+    jQuery("#menu6").removeClass('active');
+    jQuery("#menu7").removeClass('active');
+
+   if(menu < 100)
+   {
+        jQuery("#submenu1").css("display", "none");
+        jQuery("#submenu2").css("display", "none");
+        jQuery("#submenu3").css("display", "none");
+        jQuery("#submenu4").css("display", "none");
+        jQuery("#submenu5").css("display", "none");
+        jQuery("#submenu6").css("display", "none");
+   }
+   if(menu <700)
+    {
+        jQuery("#submenu7").css("display", "none"); 
+    }
+//llamada a menu�s correspondientes
+    if(menu == 1)
+   {
+    //evitando error cuando se gire pantalla
+      jQuery("#menu1").addClass('active');
+
+      jQuery(".nav li").removeClass('active');
+      jQuery('.navbar-collapse').collapse('hide');
+      //jQuery("#contenido").hide();
+      jQuery("#contenido").css("display", "none");
+      jQuery("#cifrasDos").css("display", "none");
+      jQuery("#error").hide();
+      jQuery("#principal").show();
+   }
+   else if(menu == 2)
+   {
+      //evitando error cuando se gire pantalla
+      jQuery("#menu2").addClass('active');
+      //
+      jQuery("#contenido").show();
+      jQuery("#cifrasDos").show();
+      jQuery("#principal").hide();
+      jQuery('.navbar-collapse').collapse('hide');
+      jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=materias&etc='+new Date().getTime(), function(){
+         jQuery("#mono").css('display','none');
+         jQuery("#main").fadeIn('slow');
+         grid_nivel1.sortRows(3,"str","asc");
+      });
+   }
+   else if(menu == 3)
+   {
+        //evitando error cuando se gire pantalla
+        jQuery("#menu3").addClass('active');
+        //
+        jQuery("#contenido").show();
+        jQuery("#cifrasDos").show();
+        jQuery("#principal").hide();
+        jQuery('.navbar-collapse').collapse('hide');
+      //jQuery("#submenu3").css("display", "block");
+      jQuery("#mono").css('display','');
+
+      jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=comisiones&etc='+new Date().getTime(), function(){
+         jQuery("#mono").css('display','none');
+         jQuery("#main").css('display','block');
+      });
+   }
+   else if(menu == 4)
+   {
+        //evitando error cuando se gire pantalla
+        jQuery("#menu4").addClass('active');
+        //
+        jQuery("#contenido").show();
+        jQuery("#cifrasDos").show();
+        jQuery("#principal").hide();
+        jQuery('.navbar-collapse').collapse('hide');
+      //jQuery("#submenu4").css("display", "block");
+      jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=autores_proyectos&etc='+new Date().getTime(), function(){
+         jQuery("#mono").css('display','none');
+         jQuery("#main").fadeIn('solw');
+         grid_nivel1.sortRows(0,"str","asc");
+      });
+   }
+   else if(menu == 5)
+   {
+        //evitando error cuando se gire pantalla
+
+        //
+        jQuery("#contenido").show();
+        jQuery("#cifrasDos").show();
+        jQuery("#principal").hide();
+        jQuery('.navbar-collapse').collapse('hide');
+      //jQuery("#submenu5").css("display", "block");
+      jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=sesiones&etc='+new Date().getTime(), function(){
+         jQuery("#mono").css('display','none');
+         grid_nivel1.sortRows(8,"str","des");
+         jQuery("#main").fadeIn('solw');
+         grid_nivel1.sortRows(0,"str","asc");
+      });
+   }
+   else if(menu == 6)
+   {
+        //evitando error cuando se gire pantalla
+        jQuery("#menu6").addClass('active');
+        //
+        jQuery("#contenido").show();
+        jQuery("#cifrasDos").show();
+        jQuery("#principal").hide();
+        jQuery('.navbar-collapse').collapse('hide');
+      //jQuery("#submenu6").css("display", "block");
+      jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=consulta_avanzada&etc='+new Date().getTime(), function(){
+         jQuery("#mono").css('display','none');
+         jQuery("#main").fadeIn('solw');
+      });
+   }
+   else if(menu == 7) //vista Ranking
+   {
+        //evitando error cuando se gire pantalla
+        jQuery("#menu7").addClass('active');
+        //
+        jQuery("#submenu7").css("display", "block");
+        jQuery("#contenido").show();
+        jQuery("#cifrasDos").show();
+        jQuery("#principal").hide();
+        jQuery('.navbar-collapse').collapse('hide');
+      jQuery("#mono").css('display','');
+      cambio_menu(700);
+   }
+   else if(menu == 100)
+   {
+        jQuery("#contenido").show();
+        jQuery("#cifrasDos").show();
+        jQuery("#principal").hide();
+        jQuery("#submenu1").css("display", "block");
+        jQuery('.navbar-collapse').collapse('hide');
+        //evitando errores de giro de pantalla y menu activado
+        jQuery("#menu100").addClass('active');
+        //
+      jQuery("#main").css('display', 'block');
+      jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=ultimos_vistos&etc='+new Date().getTime(), function(){
+         jQuery("#mono").css('display','none');
+         grid_nivel1.sortRows(5,"str","des");
+         grid_nivel1a.sortRows(5,"str","des");
+      });
+   }
+   else if(menu == 101)
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        jQuery("#cifrasDos").show();
+        jQuery('.navbar-collapse').collapse('hide');
+        jQuery("#submenu1").css("display", "block");
+        //evitando errores de giro de pantalla y menu activado
+        jQuery("#menu101").addClass('active');
+        //
+      jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=proyEtapaFinal&etc='+new Date().getTime(), function(){
+         jQuery("#mono").css('display','none');
+         jQuery("#main").fadeIn('solw');
+         grid.sortRows(3,"str","des");
+      });
+   }
+   else if(menu == 102)
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        jQuery("#cifrasDos").show();
+        jQuery('.navbar-collapse').collapse('hide');
+        jQuery("#submenu1").css("display", "block");
+        //evitando errores de giro de pantalla y menu activado
+        jQuery("#menu102").addClass('active');
+        //
+        jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/templates/tramitacion/por_fecha.html?etc='+new Date().getTime(),function(){
+        jQuery("#mono").css('display','none');
+         jQuery("#main").fadeIn('solw');
+      });
+   }
+   else if(menu == 103)
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        jQuery("#cifrasDos").show();
+        jQuery('.navbar-collapse').collapse('hide');
+        jQuery("#submenu1").css("display", "block");
+        //evitando errores de giro de pantalla y menu activado
+        jQuery("#menu103").addClass('active');
+        //
+        jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/templates/tramitacion/por_frase.html?etc='+new Date().getTime(), function(){
+        jQuery("#mono").css('display','none');
+         jQuery("#main").fadeIn('solw');
+      });
+   }
+   else if(menu == 700)
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        jQuery("#cifrasDos").show();
+        jQuery('.navbar-collapse').collapse('hide');
+        jQuery("#submenu7").css("display", "block");
+        //evitando errores de giro de pantalla y menu activado
+        jQuery("#menu700").addClass('active');
+        //
+        jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/templates/tramitacion/estAnios.html', function(){
+         jQuery("#mono").css('display','none');
+         jQuery("#main").css('display','block');
+      });
+   }
+   else if(menu == 701)
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        jQuery("#cifrasDos").show();
+        jQuery('.navbar-collapse').collapse('hide');
+        jQuery("#submenu7").css("display", "block");
+        //evitando errores de giro de pantalla y menu activado
+        jQuery("#menu701").addClass('active');
+        //
+        jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/templates/tramitacion/estAutores.html', function(){
+         jQuery("#mono").css('display','none');
+         jQuery("#main").css('display','block');
+      });
+   }
+}
+//Buscar boletin en navbar
+function por_num_boletin_navbar()
+{
+    jQuery('.navbar-collapse').collapse('hide');
+   sw_cambio_menu = false;
+   desde = 'boletin';
+    boletin = jQuery("#txtNumBoletin").val();
+   if(boletin == ''){
+    jQuery.blockUI({
+        theme:     true,
+        title:    '<div style="text-align: center; background:red;">Error !</div>',
+        message:  '<p>Error en ingreso de datos, por favor ingrese un dato.</p>',
+        timeout:   2000
+    });
+    return;
+   }
+   boletin = boletin.split("-");
+   numero = boletin[0];
+   digito = boletin[1];
+   numero = jQuery.trim(numero);
+   digito = jQuery.trim(digito);
+   numero = parseInt(numero);
+   digtito_num = parseInt(digito);
+   //ingreso de palabra o texto
+   if(isNaN(numero) && isNaN(digtito_num))
+   {
+        jQuery.blockUI({
+            theme:     true,
+            title:    '<div style="text-align: center; background:red;">Error !</div>',
+            message:  'Error en ingreso de datos, por favor ingrese un número de Bolet&iacute;n.',
+            timeout:   2000
+        });
+      return;
+   }
+   //ingreso de numero de boletin
+   else if(!isNaN(numero) && !isNaN(digtito_num))
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#div_contenido").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN materia POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#boletin_materias").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN comision POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#boletin_comision").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN mocion(autor) POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#boletin_mocion").hide();
+        jQuery("#cifrasDos").show();
+        jQuery.growlUI('', 'Estamos realizando su consulta!');
+        activo="boletin";
+      boletin = numero+'-'+digito;
+      jQuery("#main").fadeOut('solw', function(){
+         jQuery("#mono").css('display','');
+         jQuery("#main2").load('/appsenado/templates/tramitacion/boletin_datos.html?etc='+ new Date().getTime(), function(){
+            jQuery("#main2").fadeIn('solw');
+            jQuery("#mono").css('display','none');
+            sw_cambio_menu = true;
+         });
+      });
+   }
+   else if(!isNaN(numero))
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#div_contenido").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN materia POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#boletin_materias").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN comision POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#boletin_comision").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN mocion(autor) POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#boletin_mocion").hide();
+        jQuery("#cifrasDos").show();
+        jQuery.growlUI('', 'Estamos realizando su consulta!');
+      sw_cambio_menu = false;
+      boletin = numero;
+      jQuery("#main").fadeOut('solw', function(){
+         jQuery("#mono").css('display','');
+         jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=boletin_x_fecha&desde=0&hasta=0&boletin='+boletin+'&etc='+new Date().getTime(), function(){
+         //jQuery("#main").load('/appsenado/index.php',{mo:'tramitaciona',c:'boletin_x_fecha',desde:0,hasta:0,boletin:boletin}, function(){
+            jQuery("#main").fadeIn('solw');
+            jQuery("#mono").css('display','none');
+            //grid_nivel2.sortRows(4,"str","des");
+            sw_cambio_menu = true;
+         });
+
+      });
+   }
+   else if(!isNaN(digtito_num))
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#div_contenido").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN materia POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#boletin_materias").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN comision POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#boletin_comision").hide();
+        //SE ESCONDE CONTENIDO DE BOLETIN mocion(autor) POR SI REALIZA LA BUSQUEDA DESDE AHI
+        jQuery("#boletin_mocion").hide();
+        jQuery("#cifrasDos").show();
+        jQuery.growlUI('', 'Estamos realizando su consulta!');
+      sw_cambio_menu = false;
+      boletin = '-'+digito;
+      jQuery("#main").fadeOut('solw', function(){
+         jQuery("#mono").css('display','');
+         jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=boletin_x_fecha&boletin='+boletin+'&etc='+new Date().getTime(), function(){
+            jQuery("#main").fadeIn('solw');
+            jQuery("#mono").css('display','none');
+            grid_nivel2.sortRows(4,"str","des");
+            sw_cambio_menu = true;
+         });
+      });
+   }
+}
+
+//QUITAR ACENTOS
+function quitaacentos(s) {
+var r=s.toLowerCase();
+            r = r.replace(new RegExp(/\s/g),"");
+            r = r.replace(new RegExp(/[àáâãäå]/g),"a");
+            r = r.replace(new RegExp(/[èéêë]/g),"e");
+            r = r.replace(new RegExp(/[ìíîï]/g),"i");
+            r = r.replace(new RegExp(/ñ/g),"n");
+            r = r.replace(new RegExp(/[òóôõö]/g),"o");
+            r = r.replace(new RegExp(/[ùúûü]/g),"u");
+ return r;
+}
+
+
+function getCleanedString(cadena){
+   // Definimos los caracteres que queremos eliminar
+   var specialChars = "!@#$^&%*()+=-[]\/{}|:<>?";
+
+   // Los eliminamos todos
+   for (var i = 0; i < specialChars.length; i++) {
+       cadena= cadena.replace(new RegExp("\\" + specialChars[i], 'gi'), '');
+   }
+
+   // Lo queremos devolver limpio en minusculas
+   cadena = cadena.toLowerCase();
+
+   // Quitamos espacios y los sustituimos por _ porque nos gusta mas asi
+   cadena = cadena.replace(/ /g,"_");
+
+   // Quitamos acentos y "ñ". Fijate en que va sin comillas el primer parametro
+   cadena = cadena.replace(/á/gi,"a");
+   cadena = cadena.replace(/é/gi,"e");
+   cadena = cadena.replace(/í/gi,"i");
+   cadena = cadena.replace(/ó/gi,"o");
+   cadena = cadena.replace(/ú/gi,"u");
+   cadena = cadena.replace(/ñ/gi,"#");
+   return cadena;
+}
+
+
+//Buscar boletin principal
+function por_num_boletin()
+{
+   sw_cambio_menu = false;
+   desde = 'boletin';
+   boletin = jQuery("#txtNBoletin").val();
+   /*if(boletin==''){
+    boletin = jQuery("#txtNumBoletin").val();
+   }*/
+   if(boletin == ''){
+    jQuery.blockUI({
+        theme:     true,
+        title:    '<div style="text-align: center; background:red;">Error !</div>',
+        message:  '<p>Error en ingreso de datos, por favor ingrese un dato.</p>',
+        timeout:   2000
+    });
+    return;
+   }
+   boletin = boletin.split("-");
+   numero = boletin[0];
+   digito = boletin[1];
+   numero = jQuery.trim(numero);
+   digito = jQuery.trim(digito);
+   numero = parseInt(numero);
+   digtito_num = parseInt(digito);
+   //ingreso palabra
+   if(isNaN(numero)&& isNaN(digtito_num))
+   {
+      //alert("Error en ingreso de dato");
+      /*jQuery.blockUI({
+            theme:     true,
+            title:    'Error !',
+            message:  '<p>Error en ingreso de datos, por favor ingrese un numero de Bolet&iacute;n.</p>',
+            timeout:   2000
+        });
+      jQuery("#error").show();
+      return;*/
+      jQuery.growlUI('', 'Estamos realizando su consulta!');
+         sw_cambio_menu = false;
+          jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        jQuery("#div_contenido").hide();
+        jQuery("#cifrasDos").show();
+   palabra = jQuery("#txtNBoletin").val();
+
+   palabra = getCleanedString(palabra);
+
+   tipo_palabra=1;
+   palabra = jQuery.trim(palabra);
+      jQuery("#main").fadeOut('solw', function(){
+      jQuery("#mono").css('display','');
+      jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=boletin_x_fecha&palabra='+escape(palabra)+'&tipo_palabra='+tipo_palabra+'&etc='+new Date().getTime(), function(){
+         jQuery("#main").fadeIn('solw');
+         jQuery("#mono").css('display','none');
+         grid_nivel1.sortRows(4,"str","des");
+         sw_cambio_menu = true;
+      });
+   });
+   }
+   //ingreso boletin correcto
+   else if(!isNaN(numero) && !isNaN(digtito_num))
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        jQuery("#div_contenido").hide();
+        jQuery("#cifrasDos").show();
+        activo="boletin";
+        jQuery.growlUI('', 'Estamos realizando su consulta!');
+      boletin = numero+'-'+digito;
+      jQuery("#main").fadeOut('solw', function(){
+         jQuery("#mono").css('display','');
+         jQuery("#main2").load('/appsenado/templates/tramitacion/boletin_datos.html?etc='+ new Date().getTime(), function(){
+            jQuery("#main2").fadeIn('solw');
+            jQuery("#mono").css('display','none');
+            sw_cambio_menu = true;
+         });
+      });
+   }
+   else if(!isNaN(numero))
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        jQuery("#div_contenido").hide();
+        jQuery("#cifrasDos").show();
+        jQuery.growlUI('', 'Estamos realizando su consulta!');
+      sw_cambio_menu = false;
+      boletin = numero;
+      jQuery("#main").fadeOut('solw', function(){
+         jQuery("#mono").css('display','');
+         jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=boletin_x_fecha&desde=0&hasta=0&boletin='+boletin+'&etc='+new Date().getTime(), function(){
+            jQuery("#main").fadeIn('solw');
+            jQuery("#mono").css('display','none');
+            //grid_nivel2.sortRows(4,"str","des");
+            sw_cambio_menu = true;
+         });
+
+      });
+   }
+   else if(!isNaN(digtito_num))
+   {
+        jQuery("#contenido").show();
+        jQuery("#principal").hide();
+        jQuery("#div_contenido").hide();
+        jQuery("#cifrasDos").show();
+        jQuery.growlUI('', 'Estamos realizando su consulta!');
+      sw_cambio_menu = false;
+      boletin = '-'+digito;
+      jQuery("#main").fadeOut('solw', function(){
+         jQuery("#mono").css('display','');
+         jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=boletin_x_fecha&boletin='+boletin+'&etc='+new Date().getTime(), function(){
+            jQuery("#main").fadeIn('solw');
+            jQuery("#mono").css('display','none');
+            grid_nivel2.sortRows(4,"str","des");
+            sw_cambio_menu = true;
+         });
+      });
+   }
+}
+function subir(){
+    jQuery('.navbar-collapse').collapse('hide');
+}
+function destruye_objetos()
+{
+   jQuery("#main").empty();
+   jQuery("#main2").empty();
+   jQuery("#main3").empty();
+   if (typeof grid == "object" )
+   {
+      grid.destructor();
+      grid='';
+   }
+   if (typeof grid_nivel1 == "object" )
+   {
+      grid_nivel1.destructor();
+      grid_nivel1='';
+   }
+   if (typeof grid_nivel1a == "object" )
+   {
+      grid_nivel1a.destructor();
+      grid_nivel1a='';
+   }
+   if (typeof grid_nivel2 == "object" )
+   {
+      grid_nivel2.destructor();
+      grid_nivel2='';
+   }
+   if (typeof tabbar == "object" )
+   {
+      tabbar.clearAll();
+      tabbar='';
+   }
+   if (typeof toolbar == "object" )
+   {
+      toolbar='';
+   }
+   if (typeof selCual == "object" )
+   {
+      selCual.clearAll();
+      selCual='';
+   }
+   if (typeof selQue == "object" )
+   {
+      selQue.clearAll();
+      selQue='';
+   }
+   if (typeof dhxWins == "object" )
+   {
+      dhxWins.unload();
+      dhxWins='';
+      w1=null;
+   }
+}
+
+</script>
+
+</head>
+<body onload="Javascript:history.go(1);" onunload="Javascript:history.go(1);">
+
+  <br><br>
+
+<!-- nav de arriba -->
+    <nav  class="navbar navbar-inverse navbar-fixed-top" role="navigation" style="background-color: #2A335D">
+      <div class="container">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar2" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <div  class="navbar-brand"style="margin-top:-15px;">
+          <a href="http://www.senado.cl/"><img src="img/logo_senado4.png" class="img-responsive" style="height:50px;" /></a>
+
+          </div>
+          <a id="menu1" class="navbar-brand" href="#" onclick="cambio_menu(1)" data-toggle="pill">
+                <div>Principal</div>
+          </a>
+        </div>
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="navbar2" class="navbar-collapse collapse" >
+          <ul class="nav navbar-nav navbar-left">
+            <li class="dropdown" data-toggle="pill">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Proyectos <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="#" onclick="cambio_menu(100)" data-toggle="pill">&Uacute;ltimos vistos</a></li>
+                <li><a href="#" onclick="cambio_menu(101)" data-toggle="pill">En etapas finales</a></li>
+                <li><a href="#" onclick="cambio_menu(102)" data-toggle="pill">Por fechas</a></li>
+                <li><a href="#" onclick="cambio_menu(103)" data-toggle="pill">Palabra o frase</a></li>
+              </ul>
+            </li>
+            <li><a id="menu2" href="#" onclick="cambio_menu(2)" data-toggle="pill">Materias</a></li>
+            <li><a id="menu3" href="#" onclick="cambio_menu(3)" data-toggle="pill">Comisiones</a></li>
+            <li><a id="menu4" href="#" onclick="cambio_menu(4)" data-toggle="pill">Autores</a></li>
+            <li><a id="menu6" href="#" onclick="cambio_menu(6)" data-toggle="pill">Consulta Avanzada</a></li>
+<!--
+            <li><a id="menu7" href="#" onclick="cambio_menu(7)" data-toggle="pill">Estad&iacute;sticas</a></li>
+-->
+          </ul>
+
+          <div class="nav navbar-form navbar-left">
+            <div class="form-group">
+              <input type="text" class="form-control" name="txtNumBoletin" id="txtNumBoletin" placeholder="Ingrese Bolet&iacute;n">
+            </div>
+            <button name="btnBuscaBoletin" id="btnBuscaBoletin" onclick="por_num_boletin_navbar()" class="btn btn-default">Buscar</button>
+          </div>
+        </div><!-- /.navbar-collapse -->
+      </div><!-- /.container-fluid -->
+    </nav>
+    <!-- Fin navbar de arriba -->
+    <!-- Comienza info pagina, disponible para todos los menu's menos "menu 1" -->
+    <div id="cifrasDos" class="container" style=" display: none">
+        <br><br>
+        <div class="row">
+          <div class="col-md-4">
+            <div role="button" class="thumbnail glyphicon glyphicon-folder-open" style="text-align: center; border-color:#003b8c;" onclick="modal(1)">
+                <span style="font-size: 15px;">Proyectos Iniciados 2026</span>
+                <span class="badge" style="font-size: 15px;background-color: #003b8c;">7&nbsp;</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div role="button" class="thumbnail  glyphicon glyphicon-ok" style="text-align: center; border-color:#003b8c;" onclick="modal(2)">
+                <span style="font-size: 15px;">Proyectos de Ley Despachados</span>
+                <span class="badge" style="font-size: 15px;background-color: #003b8c;">8&nbsp;</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div role="button" class="thumbnail glyphicon glyphicon-leaf" style="text-align: center; border-color:#003b8c;" onclick="modal(3)">
+                <span style="font-size: 15px;">Sesiones Celebradas</span>
+                <span class="badge" style="font-size: 15px;background-color: #003b8c; text-align: center;">5&nbsp;</span>
+            </div>
+          </div>
+        </div>
+    </div>
+    <!-- Fin info pagina -->
+
+    <!--Comienza submenu-->
+        <div class="container">
+            <div id="submenu1" style="display: none">
+                <ul class="nav nav-tabs">
+                  <li id="menu100" role="presentation" data-toggle="pill"><a href="#" onclick="cambio_menu(100)">&Uacute;ltimos vistos</a></li>
+                  <li id="menu101" role="presentation" data-toggle="pill"><a href="#" onclick="cambio_menu(101)">En etapas finales</a></li>
+                  <li id="menu102" role="presentation" data-toggle="pill"><a href="#" onclick="cambio_menu(102)">Por fechas</a></li>
+                  <li id="menu103" role="presentation" data-toggle="pill"><a href="#" onclick="cambio_menu(103)">Palabra o Frase</a></li>
+                </ul>
+            </div>
+            <div id="submenu2" class="submenu" style="display: none"></div>
+            <div id="submenu3" class="submenu" style="display: none"></div>
+            <div id="submenu4" class="submenu" style="display: none"></div>
+            <div id="submenu5" class="submenu" style="display: none"></div>
+            <div id="submenu6" class="submenu" style="display: none"></div>
+            <div id="submenu7" style="display: none">
+                <ul class="nav nav-tabs">
+                  <li id="menu700" role="presentation" data-toggle="pill"><a href="#" onclick="cambio_menu(700)">Años</a></li>
+                  <li id="menu701" role="presentation" data-toggle="pill"><a href="#" onclick="cambio_menu(701)">Autores</a></li>
+                </ul>
+            </div>
+        </div>
+        <!--Fin submenu-->
+    <!-- Pagina Principal -->
+    <div id="principal">
+        <div class="container">
+            <div class="page-header" style="text-align: center;">
+                <h1>Tramitaci&oacute;n de Proyectos</h1>
+            </div>
+            <h2 style="text-align: center;">Las cifras del Senado</h2>
+            <div class="row">
+              <div class="col-md-4">
+                <div role="button" onclick="modal(1)" class="thumbnail  glyphicon glyphicon-folder-open" style="text-align: center;border-color:#003b8c;">
+                    <span style="font-size: 20px;">Proyectos Iniciados 2026</span><br />
+                    <span class="badge" style="font-size: 25px; background-color: #003b8c;">7&nbsp;</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div role="button" onclick="modal(2)" class="thumbnail  glyphicon glyphicon-ok" style="text-align: center;border-color:#003b8c;">
+                    <span style="font-size: 20px;">Proyectos de Ley Despachados</span><br />
+                    <span class="badge" style="font-size: 25px; background-color: #003b8c;">8&nbsp;</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div role="button" onclick="modal(3)" class="thumbnail glyphicon glyphicon-leaf" style="text-align: center; border-color:#003b8c;">
+                    <span style="font-size: 20px;">Sesiones Celebradas</span><br />
+                    <span class="badge" style="font-size: 25px; background-color: #003b8c; text-align: center;">5&nbsp;</span>
+                </div>
+              </div>
+            </div>
+        </div>
+
+        <div class="container">
+          <div class="jumbotron">
+            <span class="glyphicon glyphicon-search text-center"></span>
+            <h2 style="text-align: center;">B&uacute;squeda por Bolet&iacute;n o Palabra:</h2>
+            <h5>Realiza una búsqueda por un número de boletín, si no te lo sabes, ingresa una palabra clave para encontrar el proyecto deseado</h5>
+            <div class="panel panel-info">
+                <div   class="input-group form-group center-block">
+                  <input type="text" class="form-control" id="txtNBoletin" name="txtNBoletin" placeholder="Buscar por...">
+                </div><!-- /input-group -->
+            </div><!-- /.col-lg-6 -->
+            <div class="alert alert-danger" id="error" role="alert" style=" display: none">
+              <a class="alert-link glyphicon glyphicon-exclamation-sign">Debe ingresar un n&uacute;mero de Bolet&iacute;n v&aacute;lido</a>
+            </div>
+            <div class=" text-center">
+                <button name="input1" id="input1" type="button" onclick="por_num_boletin()" class="btn btn-primary glyphicon glyphicon-search">  BUSCAR</button>
+            </div>
+          </div>
+
+            <a name="fb_share" type="button" share_url="http://www.senado.cl/appsenado/templates/tramitacion/index.php"></a>
+
+        </div> <!-- /container -->
+    </div>
+<!-- Fin pagina Principal -->
+
+<!--CONTENIDO-->
+        <div id="contenido" class="container">
+            <div class="container-fluid">
+               <div id="mono" style="height: 200px;">
+                 <table  css="table" width="100%" border="0">
+                    <tr>
+                     <td colspan="3">&nbsp;</td>
+                    </tr>
+                    <tr>
+                       <td width="20%"></td>
+                       <td valign="middle" align="center" style="padding: 20px">
+                        <img class="img-responsive" src="/appsenado/templates/tramitacion/images/tramitacion5.gif" alt="" />
+                       </td>
+                       <td width="20%"></td>
+                    </tr>
+                 </table>
+               </div>
+               <div id="main"></div>
+               <div id="main2" style=" display: none"></div>
+               <div id="main3" style=" display: none"></div>
+            </div>
+        </div>
+ <!--FIN CONTENIDO-->
+<!-- Navbar de abajo -->
+    <div id="footer">
+        <nav role="navigation" class=" navbar-inverse navbar-fixed-bottom">
+        <div class="container" >
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="http://www.senado.cl">
+            <div class="logo">
+              <img class="logo" src="img/logo_senado.png" class="img-responsive" style="height:20px;" alt="Senado" />
+            </div>
+          </a>
+          <ul class="nav navbar-brand navbar-left">
+            <li><a href="#" onclick="subir()">Subir <span class="glyphicon glyphicon-arrow-up"></span></a></li>
+          </ul>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+            <li class="active"><a href="/appsenado/templates/tramitacion">Portada</a></li>
+            <li><a href="http://www.senado.cl">Senado</a></li>
+            <li><a href="http://www.camara.cl">C&aacute;mara de Diputados</a></li>
+            <li><a href="http://www.bcn.cl">Biblioteca del Congreso Nacional</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+        </div>
+    </nav>
+    </div>
+<!-- Modal de Proyectos Iniciados -->
+<div id="modalPIniciados" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-lg">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h3 class="modal-title text-center">Proyectos Iniciados 2026</h3>
+            </div>
+            <div class="modal-body">
+                <div class="container" style="alignment-adjust: central;text-align: center;">
+                    <h5 class="text-center">Haga doble clic sobre el bolet&iacute;n que desea revisar</h5>
+                    <div class="table-responsive">
+                        <table id="PIniciados" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                            <thead>
+                                <tr>
+                                    <!--<th>Proy ID</th>-->
+                                    <th>Boletín</th>
+                                    <th>Titulo</th>
+                                    <th>Ley</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                    <!--<th>Link</th>-->
+                                    <!--<th>Fecha_sor</th>-->
+                                </tr>
+                            </thead>
+                            <tfoot>
+                                <tr>
+                                    <!--<th>Proy ID</th>-->
+                                    <th>Boletín</th>
+                                    <th>Titulo</th>
+                                    <th>Ley</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                    <!--<th>Link</th>-->
+                                    <!--<th>Fecha_sor</th>-->
+                                </tr>
+                            </tfoot>
+                            <tbody>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">18058-07</td>
+                                    <td>Modifica diversos cuerpos legales, para sancionar a quienes cometan delitos en el extranjero haciendo uso de beneficios migratorios otorgados por Chile, en los términos que indican</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>13/01/2026</td>
+                                    <!--<td ></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">18057-07</td>
+                                    <td>Modifica la Carta Fundamental, con el objeto de permitir que personas extranjeras condenadas cumplan la pena en su país de origen o en otro Estado, en los términos que indica</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>13/01/2026</td>
+                                    <!--<td ></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">18050-16</td>
+                                    <td>Modifica el Acuerdo Complementario de la ley N°19.297 y regula las materias que indica</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>13/01/2026</td>
+                                    <!--<td ></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">18055-07</td>
+                                    <td>Modifica diversos cuerpos legales, para prohibir a los consejeros del Consejo de Defensa del Estado, la militancia y participación político partidista</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>13/01/2026</td>
+                                    <!--<td ></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">18059-07</td>
+                                    <td>Modifica diversos cuerpos legales, con el objeto de impedir que abogados que se desempeñan en instituciones estatales actúen como patrocinantes o mandatarios de imputados por los delitos que indica</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>13/01/2026</td>
+                                    <!--<td ></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">18056-07</td>
+                                    <td>Modifica la Carta Fundamental, con el objeto de modificar las fechas de la elección presidencial y parlamentaria y de la instalación del Congreso Nacional.</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>13/01/2026</td>
+                                    <!--<td ></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">18037-14</td>
+                                    <td>Modifica la ley N° 21.442, que aprueba Nueva Ley de Copropiedad Inmobiliaria, con el objeto de garantizar el derecho de los copropietarios a implementar medidas de seguridad en sus unidades de dominio exclusivo</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>06/01/2026</td>
+                                    <!--<td ></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+            </div>
+            <div class="modal-footer">
+            <h5 class="text-left">Cierre esta ventana para seguir en la p&aacute;gina</h5>
+                <!--
+<button name="btnExcel" id="btnExcel" onclick="a_excel()" type="button" class="btn btn-primary">Excel</button>
+                <button name="btnPdf" id="btnPdf" onclick="a_PDF()" type="button" class="btn btn-primary">PDF</button>
+                <button name="btnImprimir" onclick="imprimir()" type="button" class="btn btn-primary">Imprimir</button>
+-->
+                <button type="button" class="btn btn-default " data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal de Proyectos de Ley Despachados -->
+<div id="modalPLDespachados" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-lg">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h3 class="modal-title text-center">Proyectos de Ley Despachados</h3>
+            </div>
+            <div class="modal-body">
+                <div class="container" style="alignment-adjust: central;text-align: center;">
+                    <h5 class="text-center">Haga doble clic sobre el bolet&iacute;n que desea revisar</h5>
+                    <div class="table-responsive">
+                        <table id="PLDespachados" class="table table-striped table-bordered display" cellspacing="0" width="100%">
+                            <thead>
+                                <tr>
+                                    <!--<th>Proy ID</th>-->
+                                    <th>Boletín</th>
+                                    <th>Titulo</th>
+                                    <th>Ley</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                    <!--<th>Link</th>-->
+                                    <!--<th>Fecha_sor</th>-->
+                                </tr>
+                            </thead>
+                            <tfoot>
+                                <tr>
+                                    <!--<th>Proy ID</th>-->
+                                    <th>Boletín</th>
+                                    <th>Titulo</th>
+                                    <th>Ley</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                    <!--<th>Link</th>-->
+                                    <!--<th>Fecha_sor</th>-->
+                                </tr>
+                            </tfoot>
+                            <tbody>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">16905-31</td>
+                                    <td>Reconoce el derecho al cuidado y crea el Sistema Nacional de Apoyos y Cuidados</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>10/06/2024</td>
+                                    <!--<td></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">16627-08</td>
+                                    <td>Perfecciona los sistemas medianos en la Ley General de Servicios Eléctricos</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>30/01/2024</td>
+                                    <!--<td></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">10795-33</td>
+                                    <td>Modifica la legislación aplicable a los servicios públicos sanitarios, en materia de servicios no regulados, de fijación tarifaria y de cumplimiento de planes de desarrollo por parte de los prestadores</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>06/07/2016</td>
+                                    <!--<td></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">17489-04</td>
+                                    <td>Modifica y prorroga la vigencia de la ley N° 19.648, que otorga titularidad en el cargo a profesores contratados a plazo fijo por más de tres años</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>15/04/2025</td>
+                                    <!--<td></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">16901-04</td>
+                                    <td>Establece normas sobre convivencia, buen trato y bienestar de los equipos educativos, con el objeto de prevenir y erradicar el acoso escolar, la discriminación y todo tipo de violencia en los establecimientos educacionales</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>05/06/2024</td>
+                                    <!--<td></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">17117-03</td>
+                                    <td>Reconoce y fortalece a las ferias libres como pilar de la alimentación y el desarrollo local, otorgando un marco jurídico integral para ellas</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>11/09/2024</td>
+                                    <!--<td></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">17640-06</td>
+                                    <td>Modifica diversos cuerpos legales, para promover la gobernabilidad y la representatividad del sistema político</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>30/06/2025</td>
+                                    <!--<td></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                                <tr>
+                                    <!--<td></td>-->
+                                    <td class="td_boletin">16374-07</td>
+                                    <td>Modifica diversos cuerpos legales, en materia de fortalecimiento del Ministerio Público</td>
+                                    <td style="cursor:pointer"><a href=""></a></td>
+                                    <td>En tramitación</td>
+                                    <td>17/10/2023</td>
+                                    <!--<td></td>-->
+                                    <!--<td></td>-->
+                                </tr>
+                                                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+            </div>
+            <div class="modal-footer">
+            <h5 class="text-left">Cierre esta ventana para seguir en la p&aacute;gina</h5>
+                <button type="button" class="btn btn-default " data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Sesiones Celebradas -->
+<div id="modalSCelebradas" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-lg">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h3 class="modal-title text-center">Sesiones Celebradas</h3>
+            </div>
+            <div class="modal-body">
+                <div class="container" style="alignment-adjust: central;text-align: center;">
+                    <h5 class="text-center">A continuaci&oacute;n puedes visualizar las sesiones celebradas</h5>
+                    <div class="table-responsive">
+                        <table id="SCelebradas" class="table table-striped table-bordered display" cellspacing="0" width="100%">
+                            <thead>
+                                <tr>
+                                    <th>N° Sesión</th>
+                                    <th>Tipo de Sesión</th>
+                                    <th>Fecha de Sesión</th>
+                                </tr>
+                            </thead>
+                            <tfoot>
+                                <tr>
+                                    <th>N° Sesión</th>
+                                    <th>Tipo de Sesión</th>
+                                    <th>Fecha de Sesión</th>
+                                </tr>
+                            </tfoot>
+                            <tbody>
+                                                                <tr>
+                                    <td>86</td>
+                                    <td>Ordinaria</td>
+                                    <!--<td></td>-->
+                                    <td>Martes 6 de Enero de 2026</td>
+                                </tr>
+                                                                <tr>
+                                    <td>87</td>
+                                    <td>Ordinaria</td>
+                                    <!--<td></td>-->
+                                    <td>Miércoles 7 de Enero de 2026</td>
+                                </tr>
+                                                                <tr>
+                                    <td>88</td>
+                                    <td>Ordinaria</td>
+                                    <!--<td></td>-->
+                                    <td>Martes 13 de Enero de 2026</td>
+                                </tr>
+                                                                <tr>
+                                    <td>89</td>
+                                    <td>Especial</td>
+                                    <!--<td></td>-->
+                                    <td>Miércoles 14 de Enero de 2026</td>
+                                </tr>
+                                                                <tr>
+                                    <td>90</td>
+                                    <td>Ordinaria</td>
+                                    <!--<td></td>-->
+                                    <td>Miércoles 14 de Enero de 2026</td>
+                                </tr>
+                                                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+            <h5 class="text-left">Cierre esta ventana para seguir en la p&aacute;gina</h5>
+                <button type="button" class="btn btn-default " data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <!--
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+-->
+    <!--
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+-->
+
+
+</body>
+
+
+<script language="JavaScript" type="text/javascript">
+jQuery(document).ready(function(){
+
+
+   boletin_inia = jQuery("#boletin_ini").val();
+
+
+    //Pantalla modifica su medida
+    var width=jQuery(window).width();
+    var height=jQuery(window).height();
+    jQuery(window).resize(function () {
+        var newWidth = jQuery(window).width();
+        var newHeight = jQuery(window).height();
+        //evitando errores de navegadores
+        if( newWidth != width ) {
+            width = newWidth;
+            height = newHeight;
+            doneResizing();
+        }
+    });
+
+    //variables globales para detectar donde se encuentra
+    tabbaractivo="t1";
+    tabbaractivocomi="t1";
+    //función de cambio de tamaño
+    function doneResizing(){
+        if(findBootstrapEnvironment()=="xs"||findBootstrapEnvironment()=="md"||findBootstrapEnvironment()=="sm"){
+            jQuery("#contenido").removeClass('container');
+        }else{
+            jQuery("#contenido").addClass('container');
+        }
+        //console.log("resize");
+        if(jQuery("#menu100").attr('class')=='active'){
+            cambio_menu(100);//Ultimos vistos
+        }else if(jQuery("#menu3").attr('class')=='active'){
+            if(preguntocomi==true){//comision
+                datos_comision(lacomiid,lacamara,lacomision);
+            }else{
+                //cambio_menu(3);//comisiones
+            }
+        }
+    }
+   jQuery("#txtNumBoletin").bind('keypress', function(event){
+      if(event.keyCode==13)
+         por_num_boletin_navbar();
+   })
+   jQuery("#txtNBoletin").bind('keypress', function(event){
+      if(event.keyCode==13)
+         por_num_boletin();
+   })
+   //boletin_inia = jQuery("#boletin_ini").val();
+
+   if(boletin_inia != '')
+   {
+      jQuery("#txtNumBoletin").val(boletin_inia);
+      //busca_boletin();
+      por_num_boletin_navbar();
+   }
+   else
+   {
+      cambio_menu(1);
+   }
+    //Escondiendo y mostrando navbar 
+     // hide .navbar o footer first
+    //jQuery(".navbar").hide();
+    jQuery("#footer").hide();
+
+    var lastScrollTop = 0;
+    jQuery(window).scroll(function(event){
+       var st = jQuery(this).scrollTop();
+       if (st > lastScrollTop){
+           // downscroll code
+           jQuery('.navbar').fadeOut();
+           jQuery("#footer").fadeIn();
+       } else {
+          // upscroll code
+          jQuery('.navbar').fadeIn();
+          jQuery("#footer").fadeOut();
+       }
+       lastScrollTop = st;
+    });
+    
+    //Detectando tamaño pantalla y adaptando segun corresponda
+    function findBootstrapEnvironment() {
+        var envs = ['xs', 'sm', 'md', 'lg'];
+    
+        var $el = jQuery('<div>');
+        $el.appendTo(jQuery('body'));
+    
+        for (var i = envs.length - 1; i >= 0; i--) {
+            var env = envs[i];
+    
+            $el.addClass('hidden-'+env);
+            if ($el.is(':hidden')) {
+                $el.remove();
+                return env;
+            }
+        }
+    }
+    if(findBootstrapEnvironment()=="xs"||findBootstrapEnvironment()=="md"||findBootstrapEnvironment()=="sm"){
+        jQuery("#contenido").removeClass('container');
+    }
+//   var isiPad = ( navigator.userAgent.match(/iPad/i) || navigator.userAgent.match(/iPhone/i) || navigator.userAgent.match(/Android/i) ) != null;
+//   if(isiPad){
+//      alert("El dispositivo que usa, eventualmente puede presentar cierto grado de incompatibilidad con este sitio.");
+//   }
+
+})
+
+</script>
+
+
+</html>

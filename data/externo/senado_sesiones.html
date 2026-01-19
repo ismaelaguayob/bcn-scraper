@@ -1,0 +1,1290 @@
+
+
+<script language="JavaScript" type="text/javascript">
+
+dhtmlx.image_path = "/appsenado/includes/dhtmlx_v26/common/common_imgs/imgs/";
+
+jQuery(document).ready(function(){
+   var grid_nivel1 = dhtmlXGridFromTable("grid_nivel1");
+   grid_nivel1.enablePaging(true,20,15,"pagingArea",true);
+   grid_nivel1.setPagingSkin("bricks");
+
+   grid_nivel1.attachEvent("onRowSelect",function(rowid,ind){
+      switch(ind)
+      {
+        case 3:
+           var elemento = 'Tabla :';
+           break;
+        case 4:
+           var elemento = 'Cuenta :';
+           break;
+        case 5:
+           var elemento = 'Resumen :';
+           break;
+        case 6:
+           var elemento = 'Diario :';
+           break;
+        default:
+           return true;
+      }
+      num = grid_nivel1.cells(rowid,0).getValue();
+      tipo = grid_nivel1.cells(rowid,1).getValue();
+      fecha = grid_nivel1.cells(rowid,2).getValue();
+      jQuery("#main").fadeOut('solw', function(){
+         jQuery("#mono").css('display','');
+         jQuery("#main2").load('/appsenado/templates/tramitacion/muestra_docto.html?etc='+new Date().getTime(), function(){
+            jQuery("#tit_docto").text(elemento+' Sesi�n N� '+num+' '+tipo+', de fecha '+fecha);
+            jQuery("#main2").fadeIn('solw');
+            jQuery("#mono").css('display','none');
+         });
+      })
+   });
+
+   grid_nivel1.attachEvent("onBeforeSorting",function(ind,type,direction){
+      if (ind == 2){
+          this.sortRows(8,type,direction);
+          this.setSortImgState(true,ind,direction);
+          return false;
+      }
+      return true;
+   });
+})
+
+function myfunc_grid_nivel1()
+{
+   grid_nivel1.i18n.paging={
+       results:"Resultado",
+       records:"Registros desde ",
+       to:" a ",
+       page:"P�gina ",
+       perpage:"Filas por p�gina",
+       first:"A primera p�gina",
+       previous:"P�gina anterior",
+       found:"Registros encontrados",
+       next:"P�gina siguiente",
+       last:"A �ltima p�gina",
+       of:" de ",
+       notfound:"No se encontraron registros" }
+   grid_nivel1.enableAutoWidth(true);
+   grid_nivel1.enableAutoHeight(true,400,true);
+   grid_nivel1.setSkin("modern")
+   grid_nivel1.setSizes();
+   grid_nivel1.enableRowsHover(true,'grid_hover');
+   grid_nivel1.setColumnHidden(8,true);
+
+   // Inicializa combo con Legislaturas
+   combo = dhtmlXComboFromSelect("sel_legislatura",200);
+   combo.readonly(true,true);
+   combo.enableOptionAutoHeight(true,300);
+   combo.enableOptionAutoWidth(false);
+   combo.attachEvent("onChange", function(){
+   var legiid = combo.getActualValue();
+      jQuery("#main").fadeOut('solw', function(){
+         jQuery("#mono").css('display','');
+         jQuery("#main").load('/appsenado/index.php?mo=tramitacion&ac=sesiones&legiid='+legiid+'&etc='+new Date().getTime(), function(){
+            jQuery("#main").fadeIn('solw');
+            jQuery("#mono").css('display','none');
+            grid_nivel1.sortRows(8,"str","des");
+         });
+      })
+   })
+}
+
+function muestra_docto(tipo, id)
+{
+   switch(tipo)
+   {
+     case 'T':
+        var elemento = 'Tabla';
+        break;
+     case 'C':
+        var elemento = 'Cuenta';
+        break;
+     case 'R':
+        var elemento = 'Resumen';
+        break;
+     case 'D':
+        var elemento = 'Diario';
+        break;
+   }
+
+   jQuery("#main").fadeOut('solw', function(){
+      jQuery("#mono").css('display','');
+      jQuery("#main2").load('/appsenado/templates/tramitacion/muestra_docto.html?etc='+new Date().getTime(), function(){
+         jQuery("#titulo").text("kgggjhg");
+         jQuery("#main2").fadeIn('solw');
+         jQuery("#mono").css('display','none');
+      });
+   })
+}
+
+
+</script>
+
+
+<div class="con_wrap855">
+   <h1>Listado de Sesiones celebradas</h1>
+   <div class="box_1">
+   <table>
+      <tr>
+         <td width="100px"><span class="subtitu">Legislaturas:</span></td>
+         <td>
+            <select class="select1" name="sel_legislatura" id="sel_legislatura">
+               
+            </select>
+
+         </td>
+      </tr>
+   </table>
+
+
+
+
+
+
+   </div>
+
+   <div class="box_2">
+      <div class="gridbox_light">
+         <table width="100%" align="center" class="dhtmlxGrid"
+            name="grid_nivel1"
+            id="grid_nivel1"
+            multiline="true"
+            oninit="myfunc_grid_nivel1()"
+            imgpath="/appsenado/includes/dhtmlx_v26/dhtmlxGrid/codebase/imgs/"
+            border="1">
+            <tr>
+               <td width="80px" align="center" type="ro" sort="int">N&ordm;</td>
+               <td width="100" align="left" type="ro" sort="str">Tipo</td>
+               <td width="*" align="left" type="ro" sort="str">Fecha</td>
+               <td width="80px" align="center" type="ro" sort="na">Tabla</td>
+               <td width="100px" align="center" type="ro" sort="na">Ver Cuenta</td>
+               <td width="100px" align="center" type="ro" sort="na">Ver Resumen</td>
+               <td width="100px" align="center" type="ro" sort="na">Ver Diario</td>
+               <td width="100px" align="center" type="ro" sort="na">Ver Asistencia</td>
+               <td width="0px" align="center" type="ro" sort="na">fecha_sort</td>
+            </tr>
+            
+            <tr>
+               <td>90</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 14 de Enero de 2026</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td>&nbsp;</td>
+               <td>&nbsp;</td>
+               <td><div class="boton">A</div></td>
+               <td>2026/01/14</td>
+            </tr>
+            
+            <tr>
+               <td>89</td>
+               <td>Especial</td>
+               <td>Miércoles 14 de Enero de 2026</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td>&nbsp;</td>
+               <td>&nbsp;</td>
+               <td><div class="boton">A</div></td>
+               <td>2026/01/14</td>
+            </tr>
+            
+            <tr>
+               <td>88</td>
+               <td>Ordinaria</td>
+               <td>Martes 13 de Enero de 2026</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td>&nbsp;</td>
+               <td>&nbsp;</td>
+               <td><div class="boton">A</div></td>
+               <td>2026/01/13</td>
+            </tr>
+            
+            <tr>
+               <td>87</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 7 de Enero de 2026</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td>&nbsp;</td>
+               <td>&nbsp;</td>
+               <td><div class="boton">A</div></td>
+               <td>2026/01/07</td>
+            </tr>
+            
+            <tr>
+               <td>86</td>
+               <td>Ordinaria</td>
+               <td>Martes 6 de Enero de 2026</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2026/01/06</td>
+            </tr>
+            
+            <tr>
+               <td>85</td>
+               <td>Especial</td>
+               <td>Lunes 22 de Diciembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/12/22</td>
+            </tr>
+            
+            <tr>
+               <td>84</td>
+               <td>Especial</td>
+               <td>Lunes 22 de Diciembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/12/22</td>
+            </tr>
+            
+            <tr>
+               <td>83</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 17 de Diciembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/12/17</td>
+            </tr>
+            
+            <tr>
+               <td>82</td>
+               <td>Ordinaria</td>
+               <td>Martes 16 de Diciembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/12/16</td>
+            </tr>
+            
+            <tr>
+               <td>81</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 10 de Diciembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/12/10</td>
+            </tr>
+            
+            <tr>
+               <td>80</td>
+               <td>Ordinaria</td>
+               <td>Martes 9 de Diciembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/12/09</td>
+            </tr>
+            
+            <tr>
+               <td>79</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 3 de Diciembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/12/03</td>
+            </tr>
+            
+            <tr>
+               <td>78</td>
+               <td>Ordinaria</td>
+               <td>Martes 2 de Diciembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td>&nbsp;</td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/12/02</td>
+            </tr>
+            
+            <tr>
+               <td>77</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 26 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/26</td>
+            </tr>
+            
+            <tr>
+               <td>76</td>
+               <td>Especial</td>
+               <td>Martes 25 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/25</td>
+            </tr>
+            
+            <tr>
+               <td>75</td>
+               <td>Especial</td>
+               <td>Martes 25 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/25</td>
+            </tr>
+            
+            <tr>
+               <td>74</td>
+               <td>Especial</td>
+               <td>Lunes 24 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/24</td>
+            </tr>
+            
+            <tr>
+               <td>73</td>
+               <td>Especial</td>
+               <td>Lunes 24 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/24</td>
+            </tr>
+            
+            <tr>
+               <td>72</td>
+               <td>Especial</td>
+               <td>Viernes 21 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/21</td>
+            </tr>
+            
+            <tr>
+               <td>71</td>
+               <td>Especial</td>
+               <td>Jueves 20 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/20</td>
+            </tr>
+            
+            <tr>
+               <td>70</td>
+               <td>Especial</td>
+               <td>Jueves 20 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/20</td>
+            </tr>
+            
+            <tr>
+               <td>69</td>
+               <td>Especial</td>
+               <td>Jueves 20 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td>&nbsp;</td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/20</td>
+            </tr>
+            
+            <tr>
+               <td>68</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 19 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/19</td>
+            </tr>
+            
+            <tr>
+               <td>67</td>
+               <td>Especial</td>
+               <td>Lunes 10 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td>&nbsp;</td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/10</td>
+            </tr>
+            
+            <tr>
+               <td>66</td>
+               <td>Especial</td>
+               <td>Lunes 10 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/10</td>
+            </tr>
+            
+            <tr>
+               <td>65</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 5 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/05</td>
+            </tr>
+            
+            <tr>
+               <td>64</td>
+               <td>Ordinaria</td>
+               <td>Martes 4 de Noviembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/11/04</td>
+            </tr>
+            
+            <tr>
+               <td>63</td>
+               <td>Especial</td>
+               <td>Lunes 27 de Octubre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/10/27</td>
+            </tr>
+            
+            <tr>
+               <td>62</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 15 de Octubre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/10/15</td>
+            </tr>
+            
+            <tr>
+               <td>61</td>
+               <td>Ordinaria</td>
+               <td>Martes 14 de Octubre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/10/14</td>
+            </tr>
+            
+            <tr>
+               <td>60</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 8 de Octubre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/10/08</td>
+            </tr>
+            
+            <tr>
+               <td>59</td>
+               <td>Ordinaria</td>
+               <td>Martes 7 de Octubre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/10/07</td>
+            </tr>
+            
+            <tr>
+               <td>58</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 1 de Octubre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/10/01</td>
+            </tr>
+            
+            <tr>
+               <td>57</td>
+               <td>Ordinaria</td>
+               <td>Martes 30 de Septiembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/09/30</td>
+            </tr>
+            
+            <tr>
+               <td>56</td>
+               <td>Especial</td>
+               <td>Martes 30 de Septiembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/09/30</td>
+            </tr>
+            
+            <tr>
+               <td>55</td>
+               <td>Extraordinaria</td>
+               <td>Martes 16 de Septiembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/09/16</td>
+            </tr>
+            
+            <tr>
+               <td>54</td>
+               <td>Extraordinaria</td>
+               <td>Lunes 15 de Septiembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/09/15</td>
+            </tr>
+            
+            <tr>
+               <td>53</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 10 de Septiembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/09/10</td>
+            </tr>
+            
+            <tr>
+               <td>52</td>
+               <td>Especial</td>
+               <td>Miércoles 10 de Septiembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td>&nbsp;</td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/09/10</td>
+            </tr>
+            
+            <tr>
+               <td>51</td>
+               <td>Ordinaria</td>
+               <td>Martes 9 de Septiembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/09/09</td>
+            </tr>
+            
+            <tr>
+               <td>50</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 3 de Septiembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/09/03</td>
+            </tr>
+            
+            <tr>
+               <td>49</td>
+               <td>Ordinaria</td>
+               <td>Martes 2 de Septiembre de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/09/02</td>
+            </tr>
+            
+            <tr>
+               <td>48</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 20 de Agosto de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/08/20</td>
+            </tr>
+            
+            <tr>
+               <td>47</td>
+               <td>Ordinaria</td>
+               <td>Martes 19 de Agosto de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/08/19</td>
+            </tr>
+            
+            <tr>
+               <td>46</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 13 de Agosto de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/08/13</td>
+            </tr>
+            
+            <tr>
+               <td>45</td>
+               <td>Ordinaria</td>
+               <td>Martes 12 de Agosto de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/08/12</td>
+            </tr>
+            
+            <tr>
+               <td>44</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 6 de Agosto de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/08/06</td>
+            </tr>
+            
+            <tr>
+               <td>43</td>
+               <td>Extraordinaria</td>
+               <td>Martes 5 de Agosto de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/08/05</td>
+            </tr>
+            
+            <tr>
+               <td>42</td>
+               <td>Especial</td>
+               <td>Martes 5 de Agosto de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td>&nbsp;</td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/08/05</td>
+            </tr>
+            
+            <tr>
+               <td>41</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 23 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/23</td>
+            </tr>
+            
+            <tr>
+               <td>998</td>
+               <td>Congreso pleno</td>
+               <td>Miércoles 23 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td>&nbsp;</td>
+               <td>&nbsp;</td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/23</td>
+            </tr>
+            
+            <tr>
+               <td>40</td>
+               <td>Ordinaria</td>
+               <td>Martes 22 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/22</td>
+            </tr>
+            
+            <tr>
+               <td>39</td>
+               <td>Ordinaria</td>
+               <td>Martes 15 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/15</td>
+            </tr>
+            
+            <tr>
+               <td>38</td>
+               <td>Especial</td>
+               <td>Martes 15 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/15</td>
+            </tr>
+            
+            <tr>
+               <td>37</td>
+               <td>Especial</td>
+               <td>Miércoles 9 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td>&nbsp;</td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/09</td>
+            </tr>
+            
+            <tr>
+               <td>36</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 9 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/09</td>
+            </tr>
+            
+            <tr>
+               <td>35</td>
+               <td>Ordinaria</td>
+               <td>Martes 8 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/08</td>
+            </tr>
+            
+            <tr>
+               <td>34</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 2 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/02</td>
+            </tr>
+            
+            <tr>
+               <td>33</td>
+               <td>Especial</td>
+               <td>Miércoles 2 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td>&nbsp;</td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/02</td>
+            </tr>
+            
+            <tr>
+               <td>32</td>
+               <td>Extraordinaria</td>
+               <td>Martes 1 de Julio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/07/01</td>
+            </tr>
+            
+            <tr>
+               <td>31</td>
+               <td>Especial</td>
+               <td>Lunes 30 de Junio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/06/30</td>
+            </tr>
+            
+            <tr>
+               <td>30</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 18 de Junio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/06/18</td>
+            </tr>
+            
+            <tr>
+               <td>29</td>
+               <td>Especial</td>
+               <td>Miércoles 18 de Junio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/06/18</td>
+            </tr>
+            
+            <tr>
+               <td>28</td>
+               <td>Extraordinaria</td>
+               <td>Martes 17 de Junio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/06/17</td>
+            </tr>
+            
+            <tr>
+               <td>27</td>
+               <td>Extraordinaria</td>
+               <td>Miércoles 11 de Junio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/06/11</td>
+            </tr>
+            
+            <tr>
+               <td>26</td>
+               <td>Extraordinaria</td>
+               <td>Martes 10 de Junio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/06/10</td>
+            </tr>
+            
+            <tr>
+               <td>25</td>
+               <td>Especial</td>
+               <td>Miércoles 4 de Junio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/06/04</td>
+            </tr>
+            
+            <tr>
+               <td>24</td>
+               <td>Especial</td>
+               <td>Martes 3 de Junio de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/06/03</td>
+            </tr>
+            
+            <tr>
+               <td>999</td>
+               <td>Congreso pleno</td>
+               <td>Domingo 1 de Junio de 2025</td>
+               <td>&nbsp;</td>
+               <td>&nbsp;</td>
+               <td>&nbsp;</td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/06/01</td>
+            </tr>
+            
+            <tr>
+               <td>23</td>
+               <td>Especial</td>
+               <td>Miércoles 28 de Mayo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/05/28</td>
+            </tr>
+            
+            <tr>
+               <td>22</td>
+               <td>Especial</td>
+               <td>Martes 27 de Mayo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/05/27</td>
+            </tr>
+            
+            <tr>
+               <td>21</td>
+               <td>Especial</td>
+               <td>Martes 27 de Mayo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/05/27</td>
+            </tr>
+            
+            <tr>
+               <td>20</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 14 de Mayo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/05/14</td>
+            </tr>
+            
+            <tr>
+               <td>19</td>
+               <td>Ordinaria</td>
+               <td>Martes 13 de Mayo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/05/13</td>
+            </tr>
+            
+            <tr>
+               <td>18</td>
+               <td>Especial</td>
+               <td>Miércoles 7 de Mayo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/05/07</td>
+            </tr>
+            
+            <tr>
+               <td>17</td>
+               <td>Especial</td>
+               <td>Miércoles 7 de Mayo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td>&nbsp;</td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/05/07</td>
+            </tr>
+            
+            <tr>
+               <td>16</td>
+               <td>Ordinaria</td>
+               <td>Martes 6 de Mayo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/05/06</td>
+            </tr>
+            
+            <tr>
+               <td>15</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 23 de Abril de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/04/23</td>
+            </tr>
+            
+            <tr>
+               <td>14</td>
+               <td>Especial</td>
+               <td>Miércoles 23 de Abril de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/04/23</td>
+            </tr>
+            
+            <tr>
+               <td>13</td>
+               <td>Especial</td>
+               <td>Martes 22 de Abril de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/04/22</td>
+            </tr>
+            
+            <tr>
+               <td>12</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 16 de Abril de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/04/16</td>
+            </tr>
+            
+            <tr>
+               <td>11</td>
+               <td>Ordinaria</td>
+               <td>Martes 15 de Abril de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/04/15</td>
+            </tr>
+            
+            <tr>
+               <td>10</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 9 de Abril de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/04/09</td>
+            </tr>
+            
+            <tr>
+               <td>9</td>
+               <td>Ordinaria</td>
+               <td>Martes 8 de Abril de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/04/08</td>
+            </tr>
+            
+            <tr>
+               <td>8</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 26 de Marzo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/03/26</td>
+            </tr>
+            
+            <tr>
+               <td>7</td>
+               <td>Ordinaria</td>
+               <td>Martes 25 de Marzo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/03/25</td>
+            </tr>
+            
+            <tr>
+               <td>6</td>
+               <td>Ordinaria</td>
+               <td>Miércoles 19 de Marzo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/03/19</td>
+            </tr>
+            
+            <tr>
+               <td>5</td>
+               <td>Especial</td>
+               <td>Martes 18 de Marzo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td>&nbsp;</td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/03/18</td>
+            </tr>
+            
+            <tr>
+               <td>4</td>
+               <td>Especial</td>
+               <td>Martes 18 de Marzo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/03/18</td>
+            </tr>
+            
+            <tr>
+               <td>3</td>
+               <td>Especial</td>
+               <td>Miércoles 12 de Marzo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/03/12</td>
+            </tr>
+            
+            <tr>
+               <td>2</td>
+               <td>Especial</td>
+               <td>Miércoles 12 de Marzo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/03/12</td>
+            </tr>
+            
+            <tr>
+               <td>1</td>
+               <td>Especial</td>
+               <td>Martes 11 de Marzo de 2025</td>
+               <td><div class="boton">T</div></td>
+               <td><div class="boton">C</div></td>
+               <td><div class="boton">R</div></td>
+               <td><div class="boton">D</div></td>
+               <td><div class="boton">A</div></td>
+               <td>2025/03/11</td>
+            </tr>
+            
+         </table>
+         <table width="100%" align="center">
+            <tr>
+               <td id="pagingArea" style="height: 30px;"></td>
+            </tr>
+         </table>
+      </div>
+   </div>
+
+</div>
+
+
+<script language="JavaScript" type="text/javascript">
+jQuery(document).ready(function(){
+   jQuery(".dhx_combo_list").css("text-align", "left");
+})
+</script>
+
+

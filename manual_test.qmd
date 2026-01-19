@@ -1,0 +1,50 @@
+
+```{python}
+import sys
+from pathlib import Path
+
+# Agrega src al path (para poder importar sin instalar)
+sys.path.append(str(Path.cwd() / "src"))
+
+from bcn_scraper.historia_resolver import HistoriaIdResolver
+from bcn_scraper.historia_lookup import HistoriaLookup
+from bcn_scraper.historia_client import HistoriaClient
+from bcn_scraper.historia_advanced import HistoriaAdvancedSearch
+from bcn_scraper.historia_dataframe import historia_tramites_to_dataframe
+
+# Buscar por número de ley
+print("== Ley 21735 ==")
+lookup = HistoriaLookup()
+res = lookup.search("17182")
+print(res)
+
+# Resolver por URI SPARQL
+print("== Resolver por URI SPARQL ==")
+resolver = HistoriaIdResolver()
+res2 = resolver.resolve("http://datos.bcn.cl/recurso/cl/ley/ministerio-del-interior/2005-02-16/20000")
+print(res2.results)
+
+# Descargar XML de Historia de la Ley
+print("== Descargar XML de Historia de la Ley ==")
+client = HistoriaClient()
+xml = client.fetch_historia_xml(res[0].identificador)  # usa el primer ID encontrado
+print("XML bytes:", len(xml))
+
+# Guardar XML en disco
+Path("data").mkdir(exist_ok=True)
+Path("data/historia_test.xml").write_bytes(xml)
+print("Guardado en data/historia_test.xml")
+
+# Advanced search (puede devolver vacío; el backend no respondió en tests)
+print("== Búsqueda avanzada (número exacto) ==")
+adv = HistoriaAdvancedSearch()
+print(adv.search(numero_ley="17182"))
+
+# DataFrame por etapa (tramite_reglamentario)
+print("== DataFrame de trámites ==")
+df = historia_tramites_to_dataframe(xml)
+print(df.head())
+df.to_csv("data/historia_tramites_df.csv", index=False)
+print("Guardado en data/historia_tramites_df.csv")
+
+```

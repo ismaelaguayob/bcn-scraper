@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8" ?><xjx><cmd n="as" t="bcn_listaresultadobusqueda" p="innerHTML"><![CDATA[
+<div class="row">
+    <input type="hidden" class="hdn-pagina-url" value="1"/>
+    
+        <input class="hidden" type="hidden" name="texto_busqueda" value="21735" />
+    
+        <input class="hidden" type="hidden" name="ultimaPagina" value="1" />
+    
+        <input class="hidden" type="hidden" name="primeraPagina" value="1" />
+    
+        <input class="hidden" type="hidden" name="limite_recibido" value="10" />
+    
+        <input class="hidden" type="hidden" name="activo" value="" />
+    
+    <!-- center -->
+    <!--f:render section="paginador" partial="PaginadorNumeros" arguments="{arrayPaginas:arrayPaginas, listaResultadoBusquedas:listaResultadoBusquedas, nrotab:nrotab, select_aciertos:select_aciertos, primeraPagina:primeraPagina, ultimaPagina:ultimaPagina}" optional="1"></f:render-->
+</div>
+<div  class="tx_bcnlistaresultadobusqueda" >
+    
+
+            
+
+            <div class="pagina pagina_1">
+                    <div class="inner-box-resultado">
+                        <div class="row">
+                            <div class="col-xs-9 col-sm-10 col-md-10">
+                                
+                                        <a href="nc/historia-de-la-ley/8372/" class="underline"> Historia  de la Ley N° 21.735</a>
+                                    
+
+                                
+                                        <span class="resultado-busqueda-fecha">(26-03-2025)</span>
+                                    
+
+                                
+
+                                
+
+                                <p>Crea un nuevo sistema mixto de pensiones y un seguro social en el pilar contributivo, mejora la Pensión Garantizada Universal y establece beneficios y modificaciones regulatorias que indica<br>
+                                    
+                                        <a class="enlaces" href="nc/historia-de-la-ley/modificaciones/8372/aHR0cDovL2hpc3RvcmlhZGVsYWxleS5iY24uY2wvL25jL2xpc3RhLWRlLXJlc3VsdGFkby1kZS1idXNxdWVkYS8yMTczNS8%3D/#tab-1" >Historias de leyes a las cuales esta ley modifica (11)</a><br>
+                                    
+                                </p>
+                            </div>
+
+                            <div class="col-xs-3 col-sm-2 col-md-2 rs_skip">
+                                <div class="dropdown btn-group"><button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"><span class="icon-menu"></span></button><ul class="dropdown-menu menu-iconos pull-right">
+<li><a href="http://www.leychile.cl/Navegar?idNorma=1212060" target='_blank'>Ver texto Legal<span class='glyphicon  icon-ley-chile'></span></a></li>
+<li><a onclick ='herrAgregarMaletin("{\"titulo\":\"Historia  de la Ley N\\u00b0 21.735\",\"detalle\":\"Crea un nuevo sistema mixto de pensiones y un seguro social en el pilar contributivo, mejora la Pensi\\u00f3n Garantizada Universal y establece beneficios y modificaciones regulatorias que indica\",\"fecha\":\"26-03-2025\",\"identificador\":\"8372\",\"esListaResultado\":true,\"tipoRecurso\":\"HLD\"}")' target='_blank'>Enviar a mi selección<span class='glyphicon  icon-maletin'></span></a></li>
+<li><a onclick ='herrPersonalizarDossier("nc/historia-de-la-ley/dossier-personalizado/BusquedaPorTexto/8372/")' target='_blank'>Fabrica tu dossier<span class='glyphicon  icon-personalizar'></span></a></li>
+<li><a onclick ='herrDescargarPDF("{\"titulo\":\"Historia  de la Ley N\\u00b0 21.735\",\"detalle\":\"Crea un nuevo sistema mixto de pensiones y un seguro social en el pilar contributivo, mejora la Pensi\\u00f3n Garantizada Universal y establece beneficios y modificaciones regulatorias que indica\",\"fecha\":\"26-03-2025\",\"identificador\":\"8372\",\"esListaResultado\":true,\"tipoRecurso\":\"HLD\"}")' target='_blank'>Descargar en PDF<span class='glyphicon  icon-pdf'></span></a></li>
+<li><a onclick ='herrDescargarDOC("{\"titulo\":\"Historia  de la Ley N\\u00b0 21.735\",\"detalle\":\"Crea un nuevo sistema mixto de pensiones y un seguro social en el pilar contributivo, mejora la Pensi\\u00f3n Garantizada Universal y establece beneficios y modificaciones regulatorias que indica\",\"fecha\":\"26-03-2025\",\"identificador\":\"8372\",\"esListaResultado\":true,\"tipoRecurso\":\"HLD\"}")' target='_blank'>Descargar en Word<span class='glyphicon  icon-word'></span></a></li>
+<li><a onclick ='herrDescargarXML("{\"titulo\":\"Historia  de la Ley N\\u00b0 21.735\",\"detalle\":\"Crea un nuevo sistema mixto de pensiones y un seguro social en el pilar contributivo, mejora la Pensi\\u00f3n Garantizada Universal y establece beneficios y modificaciones regulatorias que indica\",\"fecha\":\"26-03-2025\",\"identificador\":\"8372\",\"esListaResultado\":true,\"tipoRecurso\":\"HLD\"}")' target='_blank'>Descargar en XML<span class='glyphicon  icon-xml'></span></a></li>
+<li><a class='data-clip' onclick='copiarUrlCorta("https://www.bcn.cl/historiadelaley/nc/historia-de-la-ley/8372/")' data-clipboard-text='/historiadelaley/nc/historia-de-la-ley/8372/' target='_blank'>Copiar url corta<span class='glyphicon  icon-link'></span></a></li>
+</ul></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            
+        
+</div>
+<div class="row">
+    <!-- center -->
+    
+    <div class="col-md-12">
+            
+                    
+                            
+                                    <br />
+                                
+                        
+                
+        </div>
+
+</div>
+]]></cmd><cmd n="js">iniciar();</cmd><cmd n="js"><![CDATA[if($(".popover-derogada").length>0){$(".popover-derogada").popover();}]]></cmd></xjx>
