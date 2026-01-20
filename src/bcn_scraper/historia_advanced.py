@@ -28,7 +28,7 @@ class HistoriaAdvancedSearch:
 
     Supported fields:
       - numero (ley o decreto) via numero_ley/numero_decreto
-      - numero_boletines
+      - boletin
       - frase_publicacion
       - frase_tramitacion
       - fecha_publicacion (range)
@@ -124,7 +124,7 @@ class HistoriaAdvancedSearch:
         if numero_decreto:
             incluye["numero"] = [{"valor": f" {numero_decreto}", "excluye": False}]
         if numero_boletin:
-            incluye["numero_boletines"] = [{"valor": numero_boletin, "excluye": False}]
+            incluye["boletin"] = [{"valor": numero_boletin, "excluye": False}]
         if frase_publicacion:
             incluye["frase_publicacion"] = [{"valor": frase_publicacion, "excluye": False}]
         if frase_tramitacion:

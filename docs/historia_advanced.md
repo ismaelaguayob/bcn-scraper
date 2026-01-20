@@ -32,4 +32,5 @@ Se usa para resolver número de ley o boletín con mejor precisión.
 
 ## Notas
 - Para búsqueda exacta por número se usa `numero` con espacio inicial.
+- Para boletín se usa el campo `boletin` (no `numero_boletines`).
 - Otros criterios pueden retornar vacío según comportamiento del sitio.
