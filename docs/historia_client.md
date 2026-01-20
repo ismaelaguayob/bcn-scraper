@@ -27,7 +27,7 @@ Representa el payload JSON usado por `herrDescargarXML`.
 - `fetch_historia_xml(identificador: str) -> bytes`
   - Implementa el flujo completo de descarga XML.
 - `parse_tramites(xml_bytes: bytes) -> List[Dict[str, str]]`
-  - Extrae trámites reglamentarios con `titulo`, `bajada`, `contenido_html`.
+  - Extrae trámites reglamentarios con `titulo`, `bajada`, `contenido_html`, `fecha_tramite`.
 
 ## Notas
 - El flujo depende de HTML y XAJAX; cambios en el sitio pueden romperlo.

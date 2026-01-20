@@ -9,6 +9,7 @@ from html import unescape
 from typing import Dict, Iterable, List, Optional, Tuple
 from urllib.parse import urlencode, urljoin
 from urllib.request import Request, urlopen
+import re
 
 
 @dataclass(frozen=True)
@@ -99,7 +100,7 @@ class HistoriaClient:
     def parse_tramites(xml_bytes: bytes) -> List[Dict[str, str]]:
         """Parse tramite_reglamentario nodes into dicts.
 
-        Returns list of dicts with titulo, bajada, contenido_html.
+        Returns list of dicts with titulo, bajada, contenido_html, fecha_tramite.
         """
         import xml.etree.ElementTree as ET
 
@@ -112,6 +113,7 @@ class HistoriaClient:
                 titulo = ''
                 bajada = ''
                 contenido_html = ''
+                fecha_tramite = ''
                 for child in elem:
                     ctag = child.tag.split('}', 1)[-1]
                     if ctag == 'titulo':
@@ -120,9 +122,13 @@ class HistoriaClient:
                         bajada = (child.text or '').strip()
                     elif ctag == 'xml':
                         contenido_html = ''.join(ET.tostring(e, encoding='unicode') for e in list(child))
+                        m = re.search(r'fecha="(\d{4}-\d{2}-\d{2})"', contenido_html)
+                        if m:
+                            fecha_tramite = m.group(1)
                 rows.append({
                     'titulo': titulo,
                     'bajada': bajada,
                     'contenido_html': contenido_html,
+                    'fecha_tramite': fecha_tramite,
                 })
         return rows

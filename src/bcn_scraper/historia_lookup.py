@@ -101,8 +101,11 @@ class HistoriaLookup:
         ]
         if mapped:
             return mapped
-        fallback_query = numero_ley or numero_boletin or ""
-        return self.search_simple(fallback_query)
+        target = numero_ley or numero_boletin or ""
+        raise ValueError(
+            f"No results for numero_ley/numero_boletin: {target}. "
+            "Try keyword search with search(query=...)."
+        )
 
     def search(
         self,

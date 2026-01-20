@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Optional
 
 from .historia_client import HistoriaClient
@@ -10,17 +9,11 @@ from .historia_dataframe import historia_tramites_to_dataframe
 from .historia_lookup import HistoriaLookup, HistoriaSearchResult
 
 
-@dataclass(frozen=True)
-class HistoriaWrapperResult:
-    query: str
-    identificador: str
-    result: HistoriaSearchResult
-
-
 def historia_dataframe_from_ley_o_boletin(
     *,
     numero_ley: Optional[str] = None,
     numero_boletin: Optional[str] = None,
+    clean_text: bool = False,
 ):
     """Resolve Historia de la Ley ID and return a DataFrame of tramites."""
     lookup = HistoriaLookup()
@@ -32,5 +25,5 @@ def historia_dataframe_from_ley_o_boletin(
     selected = results[0]
     client = HistoriaClient()
     xml_bytes = client.fetch_historia_xml(selected.identificador)
-    df = historia_tramites_to_dataframe(xml_bytes)
-    return HistoriaWrapperResult(query=numero_ley or numero_boletin or "", identificador=selected.identificador, result=selected), df
+    df = historia_tramites_to_dataframe(xml_bytes, clean_text=clean_text)
+    return df

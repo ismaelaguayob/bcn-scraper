@@ -28,9 +28,10 @@ Revisa `docs/README.md` para el índice de clases y módulos documentados.
 ```python
 from bcn_scraper import historia_dataframe_from_ley_o_boletin
 
-meta, df = historia_dataframe_from_ley_o_boletin(numero_ley="21735")
+df = historia_dataframe_from_ley_o_boletin(numero_ley="21735", clean_text=True)
 ```
 
 ## Notas
 - Los tests evitan red y usan archivos locales en `data/`.
-- `pandas` es opcional (extra `dataframe`) para helpers de DataFrame.
+- `pandas` es requerido para helpers de DataFrame.
+- `clean_text=True` agrega la columna `tramite_texto`.

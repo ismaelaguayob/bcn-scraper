@@ -30,6 +30,7 @@ uv run pytest
 - Mantén separados los clientes por fuente (Historia, Cámara, Senado).
 - Si agregas scraping, incluye un fixture local y una prueba.
 - Documenta nuevas clases en `docs/`.
+- Si agregas columnas derivadas, mantén el orden lógico (metadata norma -> fechas -> trámite -> texto).
 
 ## Estilo de commits (opcional)
 - Mensajes claros y concisos.

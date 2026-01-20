@@ -14,12 +14,12 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 dependencies = [
-  "beautifulsoup4>=4.11"
+  "beautifulsoup4>=4.11",
+  "pandas>=1.5"
 ]
 
 [project.optional-dependencies]
 test = ["pytest"]
-dataframe = ["pandas>=1.5"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

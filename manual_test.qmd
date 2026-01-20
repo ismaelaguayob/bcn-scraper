@@ -1,3 +1,17 @@
+# Manual de uso rápido (Historia de la Ley)
+
+Este documento recorre las funciones principales del paquete con ejemplos
+concretos. Modifica los parámetros si quieres probar otra ley o boletín.
+
+## Parámetros modificables
+
+```{python}
+NUMERO_LEY = "16592"
+NUMERO_BOLETIN = "15480-13"
+KEYWORDS = "pensiones"
+```
+
+## Setup
 
 ```{python}
 import sys
@@ -6,45 +20,108 @@ from pathlib import Path
 # Agrega src al path (para poder importar sin instalar)
 sys.path.append(str(Path.cwd() / "src"))
 
-from bcn_scraper.historia_resolver import HistoriaIdResolver
 from bcn_scraper.historia_lookup import HistoriaLookup
 from bcn_scraper.historia_client import HistoriaClient
 from bcn_scraper.historia_advanced import HistoriaAdvancedSearch
-from bcn_scraper.historia_dataframe import historia_tramites_to_dataframe
+from bcn_scraper.historia_dataframe import historia_tramites_to_dataframe, clean_tramite_html
+from bcn_scraper.wrapper import historia_dataframe_from_ley_o_boletin
+```
 
-# Buscar por número de ley
-print("== Ley 21735 ==")
+## 1) Búsqueda simple por keywords (HistoriaLookup)
+
+Útil cuando buscas más de un resultado o no tienes un identificador exacto.
+
+```{python}
 lookup = HistoriaLookup()
-res = lookup.search("17182")
-print(res)
+simple_results = lookup.search(query=KEYWORDS)
+print(simple_results[:3])
+```
 
-# Resolver por URI SPARQL
-print("== Resolver por URI SPARQL ==")
-resolver = HistoriaIdResolver()
-res2 = resolver.resolve("http://datos.bcn.cl/recurso/cl/ley/ministerio-del-interior/2005-02-16/20000")
-print(res2.results)
+## 2) Búsqueda avanzada por número de ley (HistoriaAdvancedSearch)
 
-# Descargar XML de Historia de la Ley
-print("== Descargar XML de Historia de la Ley ==")
-client = HistoriaClient()
-xml = client.fetch_historia_xml(res[0].identificador)  # usa el primer ID encontrado
-print("XML bytes:", len(xml))
+Usa el flujo avanzado para intentar obtener un ID más preciso.
 
-# Guardar XML en disco
-Path("data").mkdir(exist_ok=True)
-Path("data/historia_test.xml").write_bytes(xml)
-print("Guardado en data/historia_test.xml")
-
-# Advanced search (puede devolver vacío; el backend no respondió en tests)
-print("== Búsqueda avanzada (número exacto) ==")
+```{python}
 adv = HistoriaAdvancedSearch()
-print(adv.search(numero_ley="17182"))
+advanced_results = adv.search(numero_ley=NUMERO_LEY)
+print(advanced_results[:3])
+```
 
-# DataFrame por etapa (tramite_reglamentario)
-print("== DataFrame de trámites ==")
-df = historia_tramites_to_dataframe(xml)
-print(df.head())
-df.to_csv("data/historia_tramites_df.csv", index=False)
-print("Guardado en data/historia_tramites_df.csv")
+## 3) Lookup por ley o boletín (HistoriaLookup con enrutado)
 
+`HistoriaLookup.search` enruta automáticamente a búsqueda avanzada si se provee
+`numero_ley` o `numero_boletin`.
+Si no hay resultados, se recomienda usar keywords.
+
+```{python}
+law_results = lookup.search(numero_ley=NUMERO_LEY)
+print(law_results[:3])
+
+boletin_results = lookup.search(numero_boletin=NUMERO_BOLETIN)
+print(boletin_results[:3])
+```
+
+## 4) Descargar XML de Historia de la Ley (HistoriaClient)
+
+Descarga el XML usando el primer ID encontrado.
+
+```{python}
+client = HistoriaClient()
+if law_results:
+    xml = client.fetch_historia_xml(law_results[0].identificador)
+    print("XML bytes:", len(xml))
+else:
+    xml = b""
+    print("No se encontraron resultados para descargar XML.")
+
+Path("data").mkdir(exist_ok=True)
+if xml:
+    Path("data/historia_test.xml").write_bytes(xml)
+    print("Guardado en data/historia_test.xml")
+```
+
+## 5) DataFrame sin limpieza (historia_tramites_to_dataframe)
+
+Convierte el XML en un DataFrame de trámites reglamentarios **sin limpiar** el HTML.
+La fecha por trámite se extrae del atributo `fecha` en el HTML embebido.
+
+```{python}
+if xml:
+    df_no_clean = historia_tramites_to_dataframe(xml, clean_text=False)
+    print(df_no_clean.head())
+else:
+    print("Sin XML para convertir a DataFrame.")
+```
+
+## 6) Limpieza separada (clean_tramite_html)
+
+Si prefieres limpiar después, puedes aplicar la función sobre la columna
+`tramite_contenido_html` y crear una columna nueva.
+
+```{python}
+if xml:
+    df_no_clean["tramite_texto"] = df_no_clean["tramite_contenido_html"].map(clean_tramite_html)
+    print(df_no_clean[["tramite_titulo", "tramite_texto"]].head())
+```
+
+## 7) DataFrame con limpieza integrada (historia_tramites_to_dataframe)
+
+Si quieres el texto limpio desde el inicio, usa `clean_text=True`.
+
+```{python}
+if xml:
+    df = historia_tramites_to_dataframe(xml, clean_text=True)
+    print(df.head())
+    df.to_csv("data/historia_tramites_df.csv", index=False)
+    print("Guardado en data/historia_tramites_df.csv")
+```
+
+## 8) Wrapper final con limpieza activada
+
+Función unificada para obtener un DataFrame directo desde número de ley o boletín.
+Si `clean_text=True`, agrega la columna `tramite_texto`.
+
+```{python}
+df2 = historia_dataframe_from_ley_o_boletin(numero_boletin=NUMERO_BOLETIN, clean_text=True)
+print(df2.head())
 ```
