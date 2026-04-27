@@ -6,10 +6,9 @@ import json
 import re
 from dataclasses import dataclass
 from html import unescape
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, List, Optional
 from urllib.parse import urlencode, urljoin
 from urllib.request import Request, urlopen
-import re
 
 
 @dataclass(frozen=True)
@@ -66,6 +65,15 @@ class HistoriaClient:
             payloads.append(HistoriaPayload(raw=data))
         return payloads
 
+    def extract_tramite_payloads(self, html: str) -> List[HistoriaPayload]:
+        """Extract payloads for individual tramite_reglamentario XML downloads."""
+        payloads = []
+        for payload in self.extract_payloads(html):
+            pos = payload.raw.get("pos")
+            if isinstance(pos, str) and re.match(r"^\d+-\d+$", pos):
+                payloads.append(payload)
+        return payloads
+
     def xajax_endpoint_from_html(self, html: str) -> Optional[str]:
         m = re.search(r"xajaxRequestUri=\"([^\"]+)\"", html)
         return m.group(1) if m else None
@@ -82,9 +90,10 @@ class HistoriaClient:
         m = re.search(r"open\('([^']+)'", resp)
         if not m:
             raise RuntimeError("No download URL found in XAJAX response")
-        return m.group(1)
+        return urljoin(self.base, m.group(1))
 
     def fetch_historia_xml(self, identificador: str) -> bytes:
+        """Download the aggregate XML for a Historia de la Ley."""
         html = self.fetch_historia_html(identificador)
         payloads = self.extract_payloads(html)
         if not payloads:
@@ -95,6 +104,23 @@ class HistoriaClient:
         xml_url = self.request_xml_url(xajax_url, payloads[0])
         req = Request(xml_url, headers={"User-Agent": "bcn-scraper/0.1"})
         return urlopen(req, timeout=60).read()
+
+    def fetch_tramite_xmls(self, identificador: str) -> List[bytes]:
+        """Download XML files for each individual tramite_reglamentario."""
+        html = self.fetch_historia_html(identificador)
+        payloads = self.extract_tramite_payloads(html)
+        if not payloads:
+            return []
+        xajax_url = self.xajax_endpoint_from_html(html)
+        if not xajax_url:
+            raise RuntimeError("No xajaxRequestUri found")
+
+        xmls: List[bytes] = []
+        for payload in payloads:
+            xml_url = self.request_xml_url(xajax_url, payload)
+            req = Request(xml_url, headers={"User-Agent": "bcn-scraper/0.1"})
+            xmls.append(urlopen(req, timeout=60).read())
+        return xmls
 
     @staticmethod
     def parse_tramites(xml_bytes: bytes) -> List[Dict[str, str]]:

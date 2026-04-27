@@ -2,11 +2,31 @@
 
 from __future__ import annotations
 
-from typing import Dict, List
-from html import unescape
+from typing import Dict, Iterable, List
 
 import xml.etree.ElementTree as ET
 import re
+
+from .akoma_ntoso import akn_url_from_document_uri
+
+
+DATAFRAME_COLUMNS = [
+    "title",
+    "date",
+    "excerpt",
+    "xml_content",
+    "txt_content",
+    "akn_content",
+    "xml_url",
+    "akn_url",
+    "law_title",
+    "law_excerpt",
+    "publication_date",
+    "bcn_url",
+]
+
+DOCUMENT_URI_RE = re.compile(r'uriDocumento="([^"]+)"')
+DATE_RE = re.compile(r'fecha="(\d{4}-\d{2}-\d{2})"')
 
 
 def clean_tramite_html(html: str) -> str:
@@ -27,7 +47,18 @@ def clean_tramite_html(html: str) -> str:
     return "\n".join(lines)
 
 
-def historia_tramites_to_dataframe(xml_bytes: bytes, *, clean_text: bool = False):
+def extract_document_uri(html: str) -> str:
+    """Extract ``uriDocumento`` from embedded Historia de la Ley HTML."""
+    m = DOCUMENT_URI_RE.search(html or "")
+    return m.group(1) if m else ""
+
+
+def historia_tramites_to_dataframe(
+    xml_bytes: bytes,
+    *,
+    clean_text: bool = False,
+    bcn_url: str = "",
+):
     try:
         import pandas as pd
     except ImportError as e:
@@ -56,19 +87,44 @@ def historia_tramites_to_dataframe(xml_bytes: bytes, *, clean_text: bool = False
                     bajada_tr = (child.text or '').strip()
                 elif ctag == 'xml':
                     contenido_html = ''.join(ET.tostring(e, encoding='unicode') for e in list(child))
-                    m = re.search(r'fecha="(\d{4}-\d{2}-\d{2})"', contenido_html)
+                    m = DATE_RE.search(contenido_html)
                     if m:
                         fecha_tramite = m.group(1)
+            xml_url = extract_document_uri(contenido_html)
             rows.append({
-                'titulo_norma': titulo,
-                'bajada_norma': bajada,
-                'fecha_publicacion': fecha_pub,
-                'tramite_fecha': fecha_tramite,
-                'tramite_titulo': titulo_tr,
-                'tramite_bajada': bajada_tr,
-                'tramite_contenido_html': contenido_html,
+                'title': titulo_tr,
+                'date': fecha_tramite,
+                'excerpt': bajada_tr,
+                'xml_content': contenido_html,
+                'txt_content': clean_tramite_html(contenido_html) if clean_text else '',
+                'akn_content': '',
+                'xml_url': xml_url,
+                'akn_url': akn_url_from_document_uri(xml_url),
+                'law_title': titulo,
+                'law_excerpt': bajada,
+                'publication_date': fecha_pub,
+                'bcn_url': bcn_url,
             })
-    df = pd.DataFrame(rows)
-    if clean_text and not df.empty:
-        df['tramite_texto'] = df['tramite_contenido_html'].map(clean_tramite_html)
+    df = pd.DataFrame(rows, columns=DATAFRAME_COLUMNS)
     return df
+
+
+def historia_tramite_xmls_to_dataframe(
+    xmls: Iterable[bytes],
+    *,
+    clean_text: bool = False,
+    bcn_url: str = "",
+):
+    try:
+        import pandas as pd
+    except ImportError as e:
+        raise ImportError("pandas is required for historia_tramite_xmls_to_dataframe") from e
+
+    frames = [
+        historia_tramites_to_dataframe(xml_bytes, clean_text=clean_text, bcn_url=bcn_url)
+        for xml_bytes in xmls
+    ]
+    frames = [frame for frame in frames if not frame.empty]
+    if not frames:
+        return pd.DataFrame(columns=DATAFRAME_COLUMNS)
+    return pd.concat(frames, ignore_index=True)[DATAFRAME_COLUMNS]

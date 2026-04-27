@@ -13,3 +13,5 @@ htmlcov/
 new_data/
 test_old_data/
 data/
+new_features_&_reports/
+.codex

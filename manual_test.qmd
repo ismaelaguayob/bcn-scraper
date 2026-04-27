@@ -13,19 +13,30 @@ KEYWORDS = "pensiones"
 
 ## Setup
 
+Si instalaste el paquete con `uv pip install -e ".[test]"` y Positron está usando
+`./.venv/bin/python`, puedes importar directamente:
+
 ```{python}
-import sys
-from pathlib import Path
-
-# Agrega src al path (para poder importar sin instalar)
-sys.path.append(str(Path.cwd() / "src"))
-
 from bcn_scraper.historia_lookup import HistoriaLookup
 from bcn_scraper.historia_client import HistoriaClient
 from bcn_scraper.historia_advanced import HistoriaAdvancedSearch
 from bcn_scraper.historia_dataframe import historia_tramites_to_dataframe, clean_tramite_html
 from bcn_scraper.wrapper import historia_dataframe_from_ley_o_boletin
 ```
+
+Verificación útil si Positron no encuentra el paquete:
+
+```{python}
+import sys
+import bcn_scraper
+
+print(sys.executable)
+print(bcn_scraper.__file__)
+```
+
+Ambas rutas deberían apuntar al `.venv` y al `src/bcn_scraper` de este
+repositorio. Si no apuntan ahí, cambia el intérprete activo en Positron a
+`./.venv/bin/python`.
 
 ## 1) Búsqueda simple por keywords (HistoriaLookup)
 
@@ -122,6 +133,12 @@ Función unificada para obtener un DataFrame directo desde número de ley o bole
 Si `clean_text=True`, agrega la columna `tramite_texto`.
 
 ```{python}
-df2 = historia_dataframe_from_ley_o_boletin(numero_boletin=NUMERO_BOLETIN, clean_text=True)
+df2 = historia_dataframe_from_ley_o_boletin(numero_ley=21735, clean_text=True)
 print(df2.head())
+```
+
+```{python}
+
+df2.to_csv("../thesis/datos_bcn_1.csv", index=False, sep = ";")
+
 ```

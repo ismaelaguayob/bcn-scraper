@@ -20,15 +20,20 @@ Representa el payload JSON usado por `herrDescargarXML`.
   - Descarga el HTML de una Historia de la Ley.
 - `extract_payloads(html: str) -> List[HistoriaPayload]`
   - Extrae payloads JSON de handlers `herrDescargarXML`.
+- `extract_tramite_payloads(html: str) -> List[HistoriaPayload]`
+  - Filtra los payloads que corresponden a trámites reglamentarios individuales.
 - `xajax_endpoint_from_html(html: str) -> Optional[str]`
   - Lee `xajaxRequestUri` desde el HTML.
 - `request_xml_url(xajax_url: str, payload: HistoriaPayload) -> str`
   - Ejecuta `xajax=herrDescargarXML` y parsea la respuesta para obtener el XML.
 - `fetch_historia_xml(identificador: str) -> bytes`
-  - Implementa el flujo completo de descarga XML.
+  - Implementa el flujo completo de descarga del XML agregado.
+- `fetch_tramite_xmls(identificador: str) -> List[bytes]`
+  - Descarga los XML individuales de cada trámite reglamentario.
 - `parse_tramites(xml_bytes: bytes) -> List[Dict[str, str]]`
   - Extrae trámites reglamentarios con `titulo`, `bajada`, `contenido_html`, `fecha_tramite`.
 
 ## Notas
 - El flujo depende de HTML y XAJAX; cambios en el sitio pueden romperlo.
 - `parse_tramites` devuelve HTML embebido en `contenido_html`.
+- Los XML individuales pueden servir como fuente más confiable cuando el XML agregado de BCN contiene metadatos inconsistentes.
