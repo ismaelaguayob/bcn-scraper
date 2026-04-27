@@ -10,3 +10,6 @@ htmlcov/
 .DS_Store
 .idea/
 .vscode/
+new_data/
+test_old_data/
+data/
