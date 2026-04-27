@@ -1,4 +1,0 @@
-fuente,acceso,documentos_texto_completo,documentos_binarios,requiere_js,id_entrada,volumen_prueba,observaciones
-Historia de la Ley (BCN),XAJAX + obtienearchivo,SI (XML con HTML embebido),NO (texto en XML),NO (HTTP directo),identificador (ej 8372),29,XML grande (~11MB). Trámites con contenido HTML completo.
-Cámara de Diputados,HTML + verDoc.aspx,NO (descarga PDF/DOCX),SI (PDF/DOCX),NO (links directos),"prmID, prmBOLETIN",10,"Links directos a verDoc.aspx. Tipos: INICIATIVA, OFICIOPLEY."
-Senado,Endpoints internos index.php + getDocto,NO (descarga PDF/DOC),SI (PDF/DOC),NO (HTTP directo),boletin -> proyid,77,"API interna: boletin_x_fecha, datos_proy, tramites, getDocto."
