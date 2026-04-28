@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Optional
 
 import xml.etree.ElementTree as ET
 import re
@@ -58,6 +58,7 @@ def historia_tramites_to_dataframe(
     *,
     clean_text: bool = False,
     bcn_url: str = "",
+    xml_url: str = "",
 ):
     try:
         import pandas as pd
@@ -90,7 +91,7 @@ def historia_tramites_to_dataframe(
                     m = DATE_RE.search(contenido_html)
                     if m:
                         fecha_tramite = m.group(1)
-            xml_url = extract_document_uri(contenido_html)
+            document_uri = extract_document_uri(contenido_html)
             rows.append({
                 'title': titulo_tr,
                 'date': fecha_tramite,
@@ -99,7 +100,7 @@ def historia_tramites_to_dataframe(
                 'txt_content': clean_tramite_html(contenido_html) if clean_text else '',
                 'akn_content': '',
                 'xml_url': xml_url,
-                'akn_url': akn_url_from_document_uri(xml_url),
+                'akn_url': akn_url_from_document_uri(document_uri),
                 'law_title': titulo,
                 'law_excerpt': bajada,
                 'publication_date': fecha_pub,
@@ -114,15 +115,26 @@ def historia_tramite_xmls_to_dataframe(
     *,
     clean_text: bool = False,
     bcn_url: str = "",
+    xml_urls: Optional[Iterable[str]] = None,
 ):
     try:
         import pandas as pd
     except ImportError as e:
         raise ImportError("pandas is required for historia_tramite_xmls_to_dataframe") from e
 
+    xmls_list = list(xmls)
+    xml_urls_list = list(xml_urls) if xml_urls is not None else [""] * len(xmls_list)
+    if len(xml_urls_list) < len(xmls_list):
+        xml_urls_list.extend([""] * (len(xmls_list) - len(xml_urls_list)))
+
     frames = [
-        historia_tramites_to_dataframe(xml_bytes, clean_text=clean_text, bcn_url=bcn_url)
-        for xml_bytes in xmls
+        historia_tramites_to_dataframe(
+            xml_bytes,
+            clean_text=clean_text,
+            bcn_url=bcn_url,
+            xml_url=xml_urls_list[idx],
+        )
+        for idx, xml_bytes in enumerate(xmls_list)
     ]
     frames = [frame for frame in frames if not frame.empty]
     if not frames:

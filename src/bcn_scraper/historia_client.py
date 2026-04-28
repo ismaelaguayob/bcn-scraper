@@ -22,6 +22,14 @@ class HistoriaPayload:
         return str(self.raw.get("identificador")) if self.raw.get("identificador") else None
 
 
+@dataclass(frozen=True)
+class HistoriaXmlDownload:
+    """Downloaded Historia XML plus the exact BCN URL used to retrieve it."""
+
+    content: bytes
+    xml_url: str
+
+
 class HistoriaClient:
     """Client for Historia de la Ley that mirrors the XAJAX flow.
 
@@ -92,8 +100,8 @@ class HistoriaClient:
             raise RuntimeError("No download URL found in XAJAX response")
         return urljoin(self.base, m.group(1))
 
-    def fetch_historia_xml(self, identificador: str) -> bytes:
-        """Download the aggregate XML for a Historia de la Ley."""
+    def fetch_historia_xml_download(self, identificador: str) -> HistoriaXmlDownload:
+        """Download the aggregate XML for a Historia de la Ley with its URL."""
         html = self.fetch_historia_html(identificador)
         payloads = self.extract_payloads(html)
         if not payloads:
@@ -103,10 +111,14 @@ class HistoriaClient:
             raise RuntimeError("No xajaxRequestUri found")
         xml_url = self.request_xml_url(xajax_url, payloads[0])
         req = Request(xml_url, headers={"User-Agent": "bcn-scraper/0.1"})
-        return urlopen(req, timeout=60).read()
+        return HistoriaXmlDownload(content=urlopen(req, timeout=60).read(), xml_url=xml_url)
 
-    def fetch_tramite_xmls(self, identificador: str) -> List[bytes]:
-        """Download XML files for each individual tramite_reglamentario."""
+    def fetch_historia_xml(self, identificador: str) -> bytes:
+        """Download the aggregate XML for a Historia de la Ley."""
+        return self.fetch_historia_xml_download(identificador).content
+
+    def fetch_tramite_xml_downloads(self, identificador: str) -> List[HistoriaXmlDownload]:
+        """Download individual tramite_reglamentario XML files with their URLs."""
         html = self.fetch_historia_html(identificador)
         payloads = self.extract_tramite_payloads(html)
         if not payloads:
@@ -115,12 +127,16 @@ class HistoriaClient:
         if not xajax_url:
             raise RuntimeError("No xajaxRequestUri found")
 
-        xmls: List[bytes] = []
+        xmls: List[HistoriaXmlDownload] = []
         for payload in payloads:
             xml_url = self.request_xml_url(xajax_url, payload)
             req = Request(xml_url, headers={"User-Agent": "bcn-scraper/0.1"})
-            xmls.append(urlopen(req, timeout=60).read())
+            xmls.append(HistoriaXmlDownload(content=urlopen(req, timeout=60).read(), xml_url=xml_url))
         return xmls
+
+    def fetch_tramite_xmls(self, identificador: str) -> List[bytes]:
+        """Download XML files for each individual tramite_reglamentario."""
+        return [download.content for download in self.fetch_tramite_xml_downloads(identificador)]
 
     @staticmethod
     def parse_tramites(xml_bytes: bytes) -> List[Dict[str, str]]:

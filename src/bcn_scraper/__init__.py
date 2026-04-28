@@ -3,9 +3,11 @@ from .akoma_ntoso import (
     AKN_ERROR_PREFIX,
     add_akoma_ntoso_content,
     akn_url_from_document_uri,
+    debug_akoma_ntoso_errors,
     fetch_akoma_ntoso,
+    is_retryable_akn_error,
 )
-from .historia_client import HistoriaClient
+from .historia_client import HistoriaClient, HistoriaXmlDownload
 from .historia_lookup import HistoriaLookup, HistoriaSearchResult
 from .historia_advanced import HistoriaAdvancedSearch, AdvancedSearchResult
 from .historia_dataframe import (
@@ -23,7 +25,9 @@ __all__ = [
     "AKN_ERROR_PREFIX",
     "add_akoma_ntoso_content",
     "akn_url_from_document_uri",
+    "debug_akoma_ntoso_errors",
     "fetch_akoma_ntoso",
+    "is_retryable_akn_error",
     "HistoriaLookup",
     "HistoriaSearchResult",
     "HistoriaAdvancedSearch",
@@ -36,5 +40,6 @@ __all__ = [
     "HistoriaSuggest",
     "SuggestResult",
     "historia_dataframe_from_ley_o_boletin",
+    "HistoriaXmlDownload",
 ]
 __version__ = "0.1.0"

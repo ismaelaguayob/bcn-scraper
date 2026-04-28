@@ -12,6 +12,11 @@ Representa el payload JSON usado por `herrDescargarXML`.
 - `raw: Dict[str, object]`
 - `identificador` (property): retorna el identificador si existe.
 
+### HistoriaXmlDownload
+Representa un XML descargado junto a la URL exacta usada para obtenerlo.
+- `content: bytes`
+- `xml_url: str`
+
 ### HistoriaClient
 #### Métodos
 - `__init__(base: str = "https://www.bcn.cl/historiadelaley/")`
@@ -26,8 +31,12 @@ Representa el payload JSON usado por `herrDescargarXML`.
   - Lee `xajaxRequestUri` desde el HTML.
 - `request_xml_url(xajax_url: str, payload: HistoriaPayload) -> str`
   - Ejecuta `xajax=herrDescargarXML` y parsea la respuesta para obtener el XML.
+- `fetch_historia_xml_download(identificador: str) -> HistoriaXmlDownload`
+  - Implementa el flujo completo de descarga del XML agregado y preserva su URL.
 - `fetch_historia_xml(identificador: str) -> bytes`
   - Implementa el flujo completo de descarga del XML agregado.
+- `fetch_tramite_xml_downloads(identificador: str) -> List[HistoriaXmlDownload]`
+  - Descarga los XML individuales y preserva la URL de cada descarga.
 - `fetch_tramite_xmls(identificador: str) -> List[bytes]`
   - Descarga los XML individuales de cada trámite reglamentario.
 - `parse_tramites(xml_bytes: bytes) -> List[Dict[str, str]]`

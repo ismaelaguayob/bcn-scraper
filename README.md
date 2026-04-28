@@ -87,6 +87,10 @@ print(df[["date", "title", "akn_url"]].head())
 - `pandas` es requerido para helpers de DataFrame.
 - `clean_text=True` rellena la columna `txt_content`.
 - El wrapper descarga XMLs individuales por trámite por defecto para evitar inconsistencias observadas en XMLs agregados de BCN.
-- El wrapper descarga Akoma Ntoso por defecto en `akn_content`; usa `fetch_akn=False` para omitir esa descarga.
-- La descarga Akoma Ntoso usa reintentos y timeout de 60 segundos por intento,
-  porque algunos documentos de `datos.bcn.cl` pueden tardar varios segundos.
+- La descarga Akoma Ntoso está desactivada por defecto; usa `fetch_akn=True`
+  solo si necesitas IDs de actores u otra metadata AKN.
+- La descarga AKN usa `timeout=30` y sin reintentos por defecto. Para reintentar
+  fallas de handshake/timeout en una segunda pasada, usa
+  `debug_akoma_ntoso_errors`.
+- Algunos documentos de `datos.bcn.cl` no tienen AKN usable y pueden devolver
+  HTTP 500 o contenido no XML.
