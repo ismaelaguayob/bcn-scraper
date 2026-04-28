@@ -7,6 +7,7 @@ from .akoma_ntoso import (
     fetch_akoma_ntoso,
     is_retryable_akn_error,
 )
+from .akoma_speech import add_speech_content, extract_speech_from_akn
 from .historia_client import HistoriaClient, HistoriaXmlDownload
 from .historia_lookup import HistoriaLookup, HistoriaSearchResult
 from .historia_advanced import HistoriaAdvancedSearch, AdvancedSearchResult
@@ -28,6 +29,8 @@ __all__ = [
     "debug_akoma_ntoso_errors",
     "fetch_akoma_ntoso",
     "is_retryable_akn_error",
+    "add_speech_content",
+    "extract_speech_from_akn",
     "HistoriaLookup",
     "HistoriaSearchResult",
     "HistoriaAdvancedSearch",
