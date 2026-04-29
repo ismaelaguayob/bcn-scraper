@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from bcn_scraper.akoma_speech import add_speech_content, extract_speech_from_akn
+from bcn_scraper.akoma_speech import add_speech_content, extract_speech_from_akn, normalize_speech_content
 
 
 FIXTURES = Path("new_features_&_reports/speech_data_from_akn/test_data")
@@ -85,12 +85,21 @@ def test_extract_speech_extracts_address_votation_totals_and_votes():
 def test_add_speech_content_serializes_json_from_wrapper_dataframe_fixture():
     df = pd.read_csv(FIXTURES / "datos_bcn_akn.csv", sep=";", nrows=8)
 
-    enriched = add_speech_content(df)
+    enriched = add_speech_content(df, as_json=True)
     parsed = enriched["speech_content"].map(json.loads)
 
     assert "speech_content" in enriched.columns
     assert parsed.iloc[0]["metadata"]["references"]
     assert parsed.iloc[6]["error"] == "invalid_akn_content"
+
+
+def test_add_speech_content_returns_dicts_by_default():
+    df = pd.DataFrame({"akn_content": [b"<akomaNtoso><debate /></akomaNtoso>"]})
+
+    enriched = add_speech_content(df)
+
+    assert isinstance(enriched.loc[0, "speech_content"], dict)
+    assert "metadata" in enriched.loc[0, "speech_content"]
 
 
 def test_add_speech_content_handles_missing_and_bytes_values():
@@ -109,3 +118,105 @@ def test_add_speech_content_handles_missing_and_bytes_values():
     assert enriched.loc[1, "speech_content"]["error"] == "missing_akn_content"
     assert enriched.loc[2, "speech_content"]["error"] == "missing_akn_content"
     assert "metadata" in enriched.loc[3, "speech_content"]
+
+
+def test_normalize_speech_content_splits_unlabeled_speakers_with_manual_metadata():
+    speech_content = {
+        "debate_body": {
+            "point_of_order": [{
+                "projects": [{
+                    "items": [{
+                        "kind": "unlabeled_text",
+                        "id": "u1",
+                        "time_step": 1,
+                        "content": [
+                            "Ministra Jeannette Jara, le ofrecemos la palabra.",
+                            "La señora JARA (ministra del Trabajo y Previsión Social).-",
+                            "Gracias, Presidente.",
+                            "Lo saludo a usted y a todos los senadores.",
+                            "Ofrezco la palabra al señor ministro de Hacienda, don Mario Marcel.",
+                            "El señor MARCEL (ministro de Hacienda).-",
+                            "Muchas gracias, Presidente.",
+                        ],
+                    }]
+                }]
+            }]
+        }
+    }
+    df = pd.DataFrame({"speech_content": [speech_content]})
+
+    enriched = normalize_speech_content(
+        df,
+        external_speakers={
+            "JARA": {
+                "speaker": "Jeannette Jara",
+                "speaker_id": "PersonaExt10",
+                "speaker_href": "https://example.test/jara",
+                "role": "Ministra del Trabajo y Previsión Social",
+            }
+        },
+    )
+    items = enriched.loc[0, "speech_content"]["debate_body"]["point_of_order"][0]["projects"][0]["items"]
+
+    assert [item["speaker"] for item in items] == ["Jeannette Jara", "MARCEL"]
+    assert [item["speaker_id"] for item in items] == ["PersonaExt10", "PersonaExt1"]
+    assert items[0]["speaker_href"] == "https://example.test/jara"
+    assert items[0]["speaker_resolution_status"] == "user_provided"
+    assert items[1]["speaker_resolution_status"] == "regex"
+    assert items[1]["role"] == "ministro de Hacienda"
+    assert items[0]["discarded_preamble"] == ["Ministra Jeannette Jara, le ofrecemos la palabra."]
+    assert items[1]["discarded_preamble"] == [
+        "Ofrezco la palabra al señor ministro de Hacienda, don Mario Marcel."
+    ]
+    assert items[0]["content"] == [
+        "Gracias, Presidente.",
+        "Lo saludo a usted y a todos los senadores.",
+    ]
+    assert items[1]["content"] == ["Muchas gracias, Presidente."]
+
+
+def test_normalize_speech_content_keeps_unresolved_unlabeled_text():
+    speech_content = {
+        "debate_body": {
+            "point_of_order": [{
+                "projects": [{
+                    "items": [{
+                        "kind": "unlabeled_text",
+                        "id": "u1",
+                        "time_step": 1,
+                        "content": ["Este bloque no tiene marcador de habla."],
+                    }]
+                }]
+            }]
+        }
+    }
+    df = pd.DataFrame({"speech_content": [json.dumps(speech_content)]})
+
+    enriched = normalize_speech_content(df)
+    item = enriched.loc[0, "speech_content"]["debate_body"]["point_of_order"][0]["projects"][0]["items"][0]
+
+    assert item["kind"] == "unlabeled_text"
+    assert item["speaker_resolution_status"] == "unresolved"
+
+
+def test_normalize_speech_content_can_return_json():
+    speech_content = {
+        "debate_body": {
+            "point_of_order": [{
+                "projects": [{
+                    "items": [{
+                        "kind": "unlabeled_text",
+                        "content": ["El señor MARCEL (ministro de Hacienda).-", "Muchas gracias."],
+                    }]
+                }]
+            }]
+        }
+    }
+    df = pd.DataFrame({"speech_content": [speech_content]})
+
+    enriched = normalize_speech_content(df, as_json=True)
+    parsed = json.loads(enriched.loc[0, "speech_content"])
+    item = parsed["debate_body"]["point_of_order"][0]["projects"][0]["items"][0]
+
+    assert item["speaker_id"] == "PersonaExt1"
+    assert item["speaker"] == "MARCEL"

@@ -84,7 +84,11 @@ print(df[["date", "title", "akn_url"]].head())
 
 ## Discurso desde Akoma Ntoso
 ```python
-from bcn_scraper import add_speech_content, historia_dataframe_from_ley_o_boletin
+from bcn_scraper import (
+    add_speech_content,
+    historia_dataframe_from_ley_o_boletin,
+    normalize_speech_content,
+)
 
 df = historia_dataframe_from_ley_o_boletin(
     numero_ley="21735",
@@ -93,11 +97,14 @@ df = historia_dataframe_from_ley_o_boletin(
 )
 
 df = add_speech_content(df)
+df = normalize_speech_content(df)
 ```
 
 `add_speech_content` agrega una columna `speech_content` con JSON anidado para
 sesiones AKN: metadata de referencias, portada, asistencia, orden del día,
 participaciones, texto no etiquetado agrupado y votaciones etiquetadas.
+`normalize_speech_content` divide bloques no etiquetados cuando detecta
+marcadores de habla y permite agregar metadata manual de speakers externos.
 
 ## Notas
 - Los tests evitan red y usan archivos locales en `data/`.

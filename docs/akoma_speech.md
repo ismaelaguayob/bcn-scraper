@@ -17,10 +17,44 @@ del esquema BCN.
   - Convierte un XML AKN en un diccionario anidado.
   - No falla si el contenido esta vacio, empieza con `ERROR:` o no es XML valido;
     en esos casos retorna un objeto con `error`.
-- `add_speech_content(df, source_col: str = "akn_content", output_col: str = "speech_content", as_json: bool = True)`
+- `add_speech_content(df, source_col: str = "akn_content", output_col: str = "speech_content", as_json: bool = False)`
   - Retorna una copia del DataFrame con una columna nueva `speech_content`.
-  - Por defecto serializa el resultado como JSON string para que sea portable en
-    CSV/Parquet. Con `as_json=False` deja diccionarios Python en la columna.
+  - Por defecto deja diccionarios Python en la columna para facilitar el
+    procesamiento posterior. Con `as_json=True` serializa como JSON string para
+    guardar en CSV/Parquet.
+- `normalize_speech_content(df, source_col: str = "speech_content", output_col: str = "speech_content", external_speakers=None, split_unlabeled: bool = True, clean_labeled: bool = False, as_json: bool = False)`
+  - Segunda capa analitica sobre `speech_content`.
+  - Divide bloques `unlabeled_text` cuando detecta marcadores de habla con regex.
+  - Crea pseudo-participaciones con `source_kind = "unlabeled_text"` e
+    `is_labeled = False`.
+  - Permite pasar metadata manual para speakers externos o no etiquetados.
+  - `clean_labeled` queda reservado para la siguiente etapa: limpiar preambulos
+    procedimentales dentro de participaciones etiquetadas.
+
+Ejemplo con speakers externos:
+
+```python
+from bcn_scraper import add_speech_content, normalize_speech_content
+
+df = add_speech_content(df)
+
+df = normalize_speech_content(
+    df,
+    external_speakers={
+        "JARA": {
+            "speaker": "Jeannette Jara",
+            "speaker_id": "PersonaExt1",
+            "speaker_href": "https://example.test/jara",
+            "role": "Ministra del Trabajo y Previsión Social",
+        },
+        "MARCEL": {
+            "speaker": "Mario Marcel",
+            "speaker_id": "PersonaExt2",
+            "role": "Ministro de Hacienda",
+        },
+    },
+)
+```
 
 ## Esquema MVP
 El JSON usa listas ordenadas en vez de claves `project_n` o `participation_n`.
@@ -67,6 +101,17 @@ Las participaciones resuelven, cuando existe metadata:
 - `speaker_id`, `speaker`, `speaker_href`
 - `type_id`, `type`
 - `role_id`, `role`
+
+Luego de `normalize_speech_content`, los bloques `unlabeled_text` con marcador
+de habla se transforman en `participation` con:
+- `speaker_id`: proviene del diccionario manual o se genera como `PersonaExtN`.
+- `speaker`: proviene del diccionario manual o del marcador detectado.
+- `speaker_href`: opcional, proviene del diccionario manual.
+- `speaker_resolution_status`: `user_provided` o `regex`.
+- `speaker_marker`: parrafo marcador, por ejemplo `La señora JARA (...).-`.
+- `discarded_preamble`: parrafos procedimentales previos al marcador.
+- `raw_content`: contenido original, incluyendo el marcador.
+- `content`: discurso atribuido al speaker, sin el marcador.
 
 Las votaciones extraen:
 - `content`: parrafos/summary de la votacion.
