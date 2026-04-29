@@ -24,6 +24,14 @@ from .historia_dataframe import (
     historia_tramites_to_dataframe,
 )
 from .historia_suggest import HistoriaSuggest, SuggestResult
+from .parliamentary_data import (
+    build_parliamentarian_table,
+    collect_bcn_speaker_references,
+    fetch_parliamentarian_data,
+    fetch_rdf_json,
+    is_bcn_person_url,
+    rdf_json_url,
+)
 from .wrapper import historia_dataframe_from_ley_o_boletin
 
 __all__ = [
@@ -49,6 +57,12 @@ __all__ = [
     "clean_tramite_html",
     "HistoriaSuggest",
     "SuggestResult",
+    "build_parliamentarian_table",
+    "collect_bcn_speaker_references",
+    "fetch_parliamentarian_data",
+    "fetch_rdf_json",
+    "is_bcn_person_url",
+    "rdf_json_url",
     "historia_dataframe_from_ley_o_boletin",
     "HistoriaXmlDownload",
 ]

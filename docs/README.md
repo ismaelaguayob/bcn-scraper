@@ -5,6 +5,7 @@ Documentación técnica por clase y módulo del paquete `bcn_scraper`.
 Archivos disponibles:
 - `akoma_ntoso.md`: descarga y validación de XML Akoma Ntoso.
 - `akoma_speech.md`: extracción de discurso estructurado desde Akoma Ntoso.
+- `parliamentary_data.md`: extracción de metadata BCN para speakers parlamentarios.
 - `historia_client.md`: HistoriaClient y HistoriaPayload.
 - `historia_lookup.md`: HistoriaLookup y HistoriaSearchResult.
 - `historia_suggest.md`: HistoriaSuggest y SuggestResult.

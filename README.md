@@ -107,6 +107,19 @@ participaciones, texto no etiquetado agrupado y votaciones etiquetadas.
 marcadores de habla, separa eventos como aplausos, limpia preámbulos
 procedimentales y permite agregar metadata manual de speakers externos.
 
+## Datos parlamentarios BCN
+```python
+from bcn_scraper import build_parliamentarian_table
+
+parliamentarians = build_parliamentarian_table(df)
+```
+
+`build_parliamentarian_table` toma un DataFrame con `speech_content`
+normalizado, detecta speakers con `speaker_href` de `datos.bcn.cl` y agrega
+nombre BCN, género, nacionalidad, nacimiento, imagen y partido actual. Por
+defecto evita descargar fechas de militancia para mantener el proceso ágil; se
+pueden activar con `fetch_militancy_dates=True`.
+
 ## Notas
 - Los tests evitan red y usan archivos locales en `data/`.
 - `pandas` es requerido para helpers de DataFrame.
