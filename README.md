@@ -104,7 +104,8 @@ df = normalize_speech_content(df)
 sesiones AKN: metadata de referencias, portada, asistencia, orden del día,
 participaciones, texto no etiquetado agrupado y votaciones etiquetadas.
 `normalize_speech_content` divide bloques no etiquetados cuando detecta
-marcadores de habla y permite agregar metadata manual de speakers externos.
+marcadores de habla, separa eventos como aplausos, limpia preámbulos
+procedimentales y permite agregar metadata manual de speakers externos.
 
 ## Notas
 - Los tests evitan red y usan archivos locales en `data/`.

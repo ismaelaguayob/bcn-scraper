@@ -42,6 +42,13 @@ PROCEDURAL_PROMPT_RE = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+TRANSCRIPTION_EVENT_RE = re.compile(
+    r"^\s*(?:[-–—]\s*)?(?:\([^)]*\))?\s*"
+    r"(?:[-–—]\s*)?"
+    r".*\b(aplausos?|risas?|manifestaciones|murmullos|protestas)\b.*"
+    r"(?:\.\s*)?(?:\))?\s*$",
+    re.IGNORECASE,
+)
 VOTE_TOTAL_KEYS = {
     "totalVotosAFavor": "in_favor",
     "totalVotosEnContra": "against",
@@ -90,6 +97,11 @@ def strip_ref(value: str) -> str:
 def is_procedural_prompt(text: str) -> bool:
     """Return True for procedural paragraphs that introduce a next speaker."""
     return bool(PROCEDURAL_PROMPT_RE.search(text or ""))
+
+
+def is_transcription_event(text: str) -> bool:
+    """Return True for standalone transcription events such as applause."""
+    return bool(TRANSCRIPTION_EVENT_RE.match(clean_text(text)))
 
 
 def direct_children(elem: ET.Element) -> List[ET.Element]:
@@ -568,6 +580,16 @@ def public_metadata(metadata: Dict[str, Dict[str, Dict[str, str]]]) -> Dict[str,
     return {key: value for key, value in metadata.items() if key != "all"}
 
 
+def resolve_public_metadata(metadata: Dict[str, Dict[str, Dict[str, str]]], ref: str) -> Dict[str, str]:
+    """Resolve an id against public speech_content metadata."""
+    ref_id = strip_ref(ref)
+    for collection in ("persons", "roles", "organizations", "references"):
+        entry = metadata.get(collection, {}).get(ref_id)
+        if entry:
+            return entry
+    return {}
+
+
 def is_missing_akn_content(value) -> bool:
     """Return True for empty/NA values commonly produced by pandas."""
     if value is None:
@@ -641,7 +663,11 @@ class ExternalSpeakerRegistry:
         self._next_id += 1
         return speaker_id
 
-    def resolve(self, marker: Dict[str, str]) -> Dict[str, object]:
+    def resolve(
+        self,
+        marker: Dict[str, str],
+        metadata: Optional[Dict[str, Dict[str, Dict[str, str]]]] = None,
+    ) -> Dict[str, object]:
         """Resolve a marker to user-provided or generated speaker metadata."""
         speaker_key = marker["speaker_key"]
         entry = dict(self._speakers.get(speaker_key, {}))
@@ -649,17 +675,31 @@ class ExternalSpeakerRegistry:
         if not entry:
             entry = {"speaker_key": speaker_key}
 
+        metadata_entry = {}
+        if entry.get("speaker_id") and metadata:
+            metadata_entry = resolve_public_metadata(metadata, entry["speaker_id"])
+
         if not entry.get("speaker_id"):
             entry["speaker_id"] = self._next_external_id()
         if not entry.get("speaker"):
-            entry["speaker"] = marker.get("speaker_display") or speaker_key
+            entry["speaker"] = metadata_entry.get("show_as") or marker.get("speaker_display") or speaker_key
         if not entry.get("role") and marker.get("role_from_marker"):
             entry["role"] = marker["role_from_marker"]
+        if not entry.get("role") and entry.get("role_id") and metadata:
+            entry["role"] = resolve_public_metadata(metadata, entry["role_id"]).get("show_as", "")
         if not entry.get("speaker_href") and entry.get("href"):
             entry["speaker_href"] = entry["href"]
+        if not entry.get("speaker_href") and metadata_entry.get("href"):
+            entry["speaker_href"] = metadata_entry["href"]
 
         entry.setdefault("speaker_key", speaker_key)
         entry["speaker_resolution_status"] = "user_provided" if user_provided else "regex"
+        if metadata_entry:
+            entry["speaker_source"] = "akn_metadata"
+        elif user_provided:
+            entry["speaker_source"] = "manual"
+        else:
+            entry["speaker_source"] = "regex"
         self._speakers[speaker_key] = entry
         return entry
 
@@ -697,9 +737,89 @@ def external_participation_item(
     }
 
 
+def preamble_participation_item(
+    *,
+    content: List[str],
+    source_id: Optional[str],
+    marker: Optional[Dict[str, str]] = None,
+    speaker: Optional[Dict[str, object]] = None,
+) -> Dict[str, object]:
+    """Build a procedural preamble as a specially tagged participation."""
+    return {
+        "kind": "participation",
+        "source_kind": "preamble",
+        "id": source_id,
+        "time_step": None,
+        "speaker_id": speaker.get("speaker_id") if speaker else None,
+        "speaker": speaker.get("speaker") if speaker else None,
+        "speaker_href": speaker.get("speaker_href") if speaker else None,
+        "speaker_key": (speaker.get("speaker_key") if speaker else None) or (marker.get("speaker_key") if marker else None),
+        "speaker_marker": marker.get("marker") if marker else None,
+        "speaker_display": marker.get("speaker_display") if marker else None,
+        "type_id": None,
+        "type": "Preambulo procedimental",
+        "role_id": speaker.get("role_id") if speaker else None,
+        "role": speaker.get("role") if speaker else (marker.get("role_from_marker") if marker else None),
+        "speaker_resolution_status": speaker.get("speaker_resolution_status") if speaker else None,
+        "speaker_source": speaker.get("speaker_source") if speaker else None,
+        "is_labeled": False,
+        "is_preamble": True,
+        "content": content,
+        "raw_content": content,
+        "discarded_preamble": [],
+    }
+
+
+def transcription_event_item(content: str, source_id: Optional[str]) -> Dict[str, object]:
+    """Build a standalone transcription event item."""
+    return {
+        "kind": "transcription_event",
+        "source_kind": "unlabeled_text",
+        "id": source_id,
+        "time_step": None,
+        "type": "Transcription event",
+        "content": [content],
+    }
+
+
+def interruption_participation_item(
+    *,
+    marker: Dict[str, str],
+    speaker: Dict[str, object],
+    content: List[str],
+    source_id: Optional[str],
+) -> Dict[str, object]:
+    """Build an interruption item inside a labeled participation."""
+    return {
+        "kind": "participation",
+        "source_kind": "interruption",
+        "id": source_id,
+        "time_step": None,
+        "speaker_id": speaker.get("speaker_id"),
+        "speaker": speaker.get("speaker"),
+        "speaker_href": speaker.get("speaker_href"),
+        "speaker_key": speaker.get("speaker_key") or marker.get("speaker_key"),
+        "speaker_marker": marker.get("marker"),
+        "speaker_display": marker.get("speaker_display"),
+        "type_id": None,
+        "type": "Interrupcion",
+        "role_id": speaker.get("role_id"),
+        "role": speaker.get("role"),
+        "speaker_resolution_status": speaker.get("speaker_resolution_status"),
+        "speaker_source": speaker.get("speaker_source"),
+        "is_labeled": False,
+        "is_interruption": True,
+        "content": content,
+        "raw_content": content,
+        "discarded_preamble": [],
+    }
+
+
 def split_unlabeled_item(
     item: Dict[str, object],
     registry: ExternalSpeakerRegistry,
+    metadata: Dict[str, Dict[str, Dict[str, str]]],
+    split_transcription_events: bool,
 ) -> List[Dict[str, object]]:
     """Split one unlabeled_text item into speaker-level participation items."""
     paragraphs = [clean_text(paragraph) for paragraph in item.get("content", []) if clean_text(paragraph)]
@@ -711,66 +831,201 @@ def split_unlabeled_item(
     current_speaker = None
     current_content: List[str] = []
     current_raw: List[str] = []
-    pending_preamble: List[str] = []
-    current_discarded_preamble: List[str] = []
+    current_procedural: List[str] = []
+    pre_marker_preamble: List[str] = []
+    last_marker = None
+    last_speaker = None
 
     def flush_current() -> None:
-        nonlocal current_marker, current_speaker, current_content, current_raw, current_discarded_preamble
+        nonlocal current_marker, current_speaker, current_content, current_raw, current_procedural
         if current_marker and current_speaker:
-            result.append(external_participation_item(
-                marker=current_marker,
-                speaker=current_speaker,
-                content=current_content,
-                raw_content=current_raw,
-                discarded_preamble=current_discarded_preamble,
-                source_id=item.get("id"),
-            ))
+            if current_content:
+                raw_content = ([current_marker["marker"]] if current_raw else []) + current_procedural + current_content
+                result.append(external_participation_item(
+                    marker=current_marker,
+                    speaker=current_speaker,
+                    content=current_content,
+                    raw_content=raw_content,
+                    discarded_preamble=[],
+                    source_id=item.get("id"),
+                ))
+            elif current_raw or current_procedural:
+                result.append(preamble_participation_item(
+                    marker=current_marker,
+                    speaker=current_speaker,
+                    content=current_raw + current_procedural,
+                    source_id=item.get("id"),
+                ))
         current_marker = None
         current_speaker = None
         current_content = []
         current_raw = []
-        current_discarded_preamble = []
+        current_procedural = []
+
+    def flush_pre_marker_preamble() -> None:
+        nonlocal pre_marker_preamble
+        if pre_marker_preamble:
+            result.append(preamble_participation_item(
+                content=pre_marker_preamble,
+                source_id=item.get("id"),
+            ))
+            pre_marker_preamble = []
 
     for paragraph in paragraphs:
         marker = detect_speech_marker(paragraph)
         if marker:
-            discarded_for_next = pending_preamble
             flush_current()
+            flush_pre_marker_preamble()
             current_marker = marker
-            current_speaker = registry.resolve(marker)
+            current_speaker = registry.resolve(marker, metadata)
             current_raw = [paragraph]
             current_content = []
-            current_discarded_preamble = discarded_for_next
-            pending_preamble = []
+            current_procedural = []
+            last_marker = current_marker
+            last_speaker = current_speaker
+            continue
+
+        if split_transcription_events and is_transcription_event(paragraph):
+            flush_current()
+            flush_pre_marker_preamble()
+            result.append(transcription_event_item(paragraph, item.get("id")))
+            if last_marker and last_speaker:
+                current_marker = last_marker
+                current_speaker = last_speaker
+                current_raw = []
+                current_content = []
+                current_procedural = []
             continue
 
         if current_marker:
             if is_procedural_prompt(paragraph):
-                pending_preamble.append(paragraph)
+                if current_content:
+                    flush_current()
+                    pre_marker_preamble.append(paragraph)
+                else:
+                    current_procedural.append(paragraph)
                 continue
-            if pending_preamble:
-                current_content.extend(pending_preamble)
-                current_raw.extend(pending_preamble)
-                pending_preamble = []
             current_content.append(paragraph)
             current_raw.append(paragraph)
         else:
-            pending_preamble.append(paragraph)
+            pre_marker_preamble.append(paragraph)
 
     flush_current()
     if not result:
         unresolved = dict(item)
         unresolved["speaker_resolution_status"] = "unresolved"
         return [unresolved]
+    flush_pre_marker_preamble()
     return result
+
+
+def speaker_marker_matches(marker: Dict[str, str], item: Dict[str, object]) -> bool:
+    """Return True when a detected marker appears to name the participation speaker."""
+    speaker = normalize_text_key(str(item.get("speaker") or ""))
+    marker_key = marker.get("speaker_key", "")
+    if not speaker or not marker_key:
+        return False
+    return marker_key in speaker
+
+
+def clean_labeled_participation_item(
+    item: Dict[str, object],
+    registry: ExternalSpeakerRegistry,
+    metadata: Dict[str, Dict[str, Dict[str, str]]],
+    split_transcription_events: bool,
+) -> List[Dict[str, object]]:
+    """Split procedural preambles/events/interruptions from labeled participations."""
+    content = [clean_text(paragraph) for paragraph in item.get("content", []) if clean_text(paragraph)]
+    if not content:
+        return [item]
+
+    output: List[Dict[str, object]] = []
+    current_mode = "main"
+    current_segment: List[str] = []
+    current_marker = None
+    current_speaker = None
+    current_speech_marker = None
+
+    def append_main_segment(segment: List[str], speech_marker: Optional[str]) -> None:
+        if not segment:
+            return
+        cleaned = dict(item)
+        cleaned["content"] = segment
+        cleaned["raw_content"] = content
+        if speech_marker:
+            cleaned["speech_marker"] = speech_marker
+        cleaned.setdefault("discarded_preamble", [])
+        cleaned["is_labeled"] = True
+        output.append(cleaned)
+
+    def flush_segment() -> None:
+        nonlocal current_segment, current_mode, current_marker, current_speaker, current_speech_marker
+        if not current_segment:
+            current_mode = "main"
+            current_marker = None
+            current_speaker = None
+            current_speech_marker = None
+            return
+        if current_mode == "main":
+            append_main_segment(current_segment, current_speech_marker)
+        else:
+            has_procedural_prompt = any(is_procedural_prompt(paragraph) for paragraph in current_segment)
+            if has_procedural_prompt:
+                output.append(preamble_participation_item(
+                    content=current_segment,
+                    source_id=item.get("id"),
+                    marker=current_marker,
+                    speaker=current_speaker,
+                ))
+            else:
+                output.append(interruption_participation_item(
+                    content=current_segment,
+                    source_id=item.get("id"),
+                    marker=current_marker,
+                    speaker=current_speaker or {},
+                ))
+        current_mode = "main"
+        current_segment = []
+        current_marker = None
+        current_speaker = None
+        current_speech_marker = None
+
+    for paragraph in content:
+        marker = detect_speech_marker(paragraph)
+        if split_transcription_events and is_transcription_event(paragraph):
+            flush_segment()
+            output.append(transcription_event_item(paragraph, item.get("id")))
+            continue
+
+        if marker and speaker_marker_matches(marker, item):
+            flush_segment()
+            current_mode = "main"
+            current_speech_marker = marker["marker"]
+            continue
+
+        if marker:
+            flush_segment()
+            current_mode = "interruption"
+            current_marker = marker
+            current_speaker = registry.resolve(marker, metadata)
+            current_segment = [paragraph]
+            continue
+
+        current_segment.append(paragraph)
+
+    flush_segment()
+
+    return output or [item]
 
 
 def normalize_items(
     items: List[Dict[str, object]],
     registry: ExternalSpeakerRegistry,
+    metadata: Dict[str, Dict[str, Dict[str, str]]],
     *,
     split_unlabeled: bool,
     clean_labeled: bool,
+    split_transcription_events: bool,
 ) -> List[Dict[str, object]]:
     """Normalize item lists recursively."""
     normalized: List[Dict[str, object]] = []
@@ -780,12 +1035,30 @@ def normalize_items(
             current_item["items"] = normalize_items(
                 current_item["items"],
                 registry,
+                metadata,
                 split_unlabeled=split_unlabeled,
                 clean_labeled=clean_labeled,
+                split_transcription_events=split_transcription_events,
             )
 
         if split_unlabeled and current_item.get("kind") == "unlabeled_text":
-            normalized.extend(split_unlabeled_item(current_item, registry))
+            normalized.extend(split_unlabeled_item(
+                current_item,
+                registry,
+                metadata,
+                split_transcription_events,
+            ))
+        elif (
+            clean_labeled
+            and current_item.get("kind") == "participation"
+            and current_item.get("source_kind") not in {"unlabeled_text", "preamble"}
+        ):
+            normalized.extend(clean_labeled_participation_item(
+                current_item,
+                registry,
+                metadata,
+                split_transcription_events,
+            ))
         else:
             if current_item.get("kind") == "participation" and "is_labeled" not in current_item:
                 current_item["is_labeled"] = True
@@ -802,11 +1075,13 @@ def normalize_speech_dict(
     *,
     split_unlabeled: bool,
     clean_labeled: bool,
+    split_transcription_events: bool,
 ) -> Dict[str, object]:
     """Normalize one speech_content dictionary."""
     result = copy.deepcopy(speech_content)
     if "error" in result:
         return result
+    metadata = result.get("metadata", {})
 
     def visit(value):
         if isinstance(value, dict):
@@ -814,8 +1089,10 @@ def normalize_speech_dict(
                 value["items"] = normalize_items(
                     value["items"],
                     registry,
+                    metadata,
                     split_unlabeled=split_unlabeled,
                     clean_labeled=clean_labeled,
+                    split_transcription_events=split_transcription_events,
                 )
             for child in value.values():
                 visit(child)
@@ -851,7 +1128,8 @@ def normalize_speech_content(
     output_col: str = "speech_content",
     external_speakers: Optional[Dict[str, Dict[str, str]]] = None,
     split_unlabeled: bool = True,
-    clean_labeled: bool = False,
+    clean_labeled: bool = True,
+    split_transcription_events: bool = True,
     as_json: bool = False,
 ):
     """Normalize speech_content for analysis, including unlabeled speaker splits."""
@@ -869,6 +1147,7 @@ def normalize_speech_content(
             registry,
             split_unlabeled=split_unlabeled,
             clean_labeled=clean_labeled,
+            split_transcription_events=split_transcription_events,
         )
         if as_json:
             return json.dumps(normalized, ensure_ascii=False)
@@ -876,6 +1155,111 @@ def normalize_speech_content(
 
     result[output_col] = result[source_col].map(convert)
     return result
+
+
+def collect_unlabeled_speaker_candidates(
+    df,
+    *,
+    source_col: str = "speech_content",
+    external_speakers: Optional[Dict[str, Dict[str, str]]] = None,
+    as_dataframe: bool = True,
+):
+    """Collect regex-detected unlabeled speakers that need manual metadata."""
+    manual = {
+        normalize_text_key(key): dict(value or {})
+        for key, value in (external_speakers or {}).items()
+        if normalize_text_key(key)
+    }
+    candidates: Dict[str, Dict[str, object]] = {}
+
+    def add_candidate(marker: Dict[str, str], example: str, context: Dict[str, object]) -> None:
+        speaker_key = marker["speaker_key"]
+        entry = candidates.setdefault(speaker_key, {
+            "speaker_key": speaker_key,
+            "speaker_display": marker.get("speaker_display", ""),
+            "role_from_marker": marker.get("role_from_marker", ""),
+            "n_occurrences": 0,
+            "examples": [],
+            "documents": [],
+        })
+        entry["n_occurrences"] += 1
+        if example and len(entry["examples"]) < 3:
+            entry["examples"].append(example)
+        document = {
+            "row_index": context.get("row_index"),
+            "title": context.get("title", ""),
+            "date": context.get("date", ""),
+            "akn_url": context.get("akn_url", ""),
+            "xml_url": context.get("xml_url", ""),
+        }
+        if document not in entry["documents"] and len(entry["documents"]) < 5:
+            entry["documents"].append(document)
+
+    def visit(value, context: Dict[str, object]) -> None:
+        if isinstance(value, dict):
+            if value.get("kind") == "unlabeled_text":
+                for paragraph in value.get("content", []):
+                    marker = detect_speech_marker(paragraph)
+                    if marker:
+                        add_candidate(marker, clean_text(paragraph), context)
+            elif value.get("kind") == "participation" and value.get("source_kind") == "unlabeled_text":
+                marker = {
+                    "speaker_key": value.get("speaker_key") or normalize_text_key(value.get("speaker", "")),
+                    "speaker_display": value.get("speaker_display") or value.get("speaker", ""),
+                    "role_from_marker": value.get("role") or "",
+                }
+                if marker["speaker_key"]:
+                    add_candidate(marker, value.get("speaker_marker") or "", context)
+            for child in value.values():
+                visit(child, context)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child, context)
+
+    if source_col not in df.columns:
+        rows: List[Dict[str, object]] = []
+    else:
+        for row_index, row in df.iterrows():
+            context = {
+                "row_index": row_index,
+                "title": row.get("title", ""),
+                "date": row.get("date", ""),
+                "akn_url": row.get("akn_url", ""),
+                "xml_url": row.get("xml_url", ""),
+            }
+            visit(parse_speech_content_value(row[source_col]), context)
+        rows = []
+        for speaker_key, entry in sorted(candidates.items()):
+            manual_entry = manual.get(speaker_key, {})
+            missing_fields = [
+                field
+                for field in ("speaker", "speaker_id", "speaker_href", "role")
+                if not manual_entry.get(field)
+            ]
+            rows.append({
+                **entry,
+                "first_row_index": entry["documents"][0]["row_index"] if entry["documents"] else None,
+                "first_title": entry["documents"][0]["title"] if entry["documents"] else "",
+                "first_date": entry["documents"][0]["date"] if entry["documents"] else "",
+                "first_akn_url": entry["documents"][0]["akn_url"] if entry["documents"] else "",
+                "first_xml_url": entry["documents"][0]["xml_url"] if entry["documents"] else "",
+                "has_manual_entry": bool(manual_entry),
+                "manual_speaker": manual_entry.get("speaker", ""),
+                "manual_speaker_id": manual_entry.get("speaker_id", ""),
+                "manual_speaker_href": manual_entry.get("speaker_href") or manual_entry.get("href", ""),
+                "manual_role": manual_entry.get("role", ""),
+                "missing_fields": missing_fields,
+                "metadata_status": "complete" if manual_entry and not missing_fields else "incomplete",
+            })
+
+    if not as_dataframe:
+        return rows
+
+    try:
+        import pandas as pd
+    except ImportError as e:
+        raise ImportError("pandas is required for collect_unlabeled_speaker_candidates") from e
+    return pd.DataFrame(rows)
 
 
 def extract_speech_from_akn(akn_content: str) -> Dict[str, object]:

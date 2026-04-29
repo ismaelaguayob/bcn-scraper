@@ -22,14 +22,21 @@ del esquema BCN.
   - Por defecto deja diccionarios Python en la columna para facilitar el
     procesamiento posterior. Con `as_json=True` serializa como JSON string para
     guardar en CSV/Parquet.
-- `normalize_speech_content(df, source_col: str = "speech_content", output_col: str = "speech_content", external_speakers=None, split_unlabeled: bool = True, clean_labeled: bool = False, as_json: bool = False)`
+- `normalize_speech_content(df, source_col: str = "speech_content", output_col: str = "speech_content", external_speakers=None, split_unlabeled: bool = True, clean_labeled: bool = True, split_transcription_events: bool = True, as_json: bool = False)`
   - Segunda capa analitica sobre `speech_content`.
   - Divide bloques `unlabeled_text` cuando detecta marcadores de habla con regex.
   - Crea pseudo-participaciones con `source_kind = "unlabeled_text"` e
     `is_labeled = False`.
   - Permite pasar metadata manual para speakers externos o no etiquetados.
-  - `clean_labeled` queda reservado para la siguiente etapa: limpiar preambulos
-    procedimentales dentro de participaciones etiquetadas.
+- Si `clean_labeled=True`, limpia preambulos procedimentales dentro de
+    participaciones etiquetadas y separa interrupciones internas.
+  - Si `split_transcription_events=True`, separa eventos independientes como
+    aplausos o manifestaciones.
+- `collect_unlabeled_speaker_candidates(df, source_col: str = "speech_content", external_speakers=None, as_dataframe: bool = True)`
+  - Lista speakers detectados por regex en contenido no etiquetado.
+  - Sirve para iterar sobre el diccionario manual de desambiguacion.
+  - Incluye contexto de la primera aparicion: `first_title`, `first_date`,
+    `first_akn_url`, `first_xml_url`, ademas de una lista `documents`.
 
 Ejemplo con speakers externos:
 
@@ -52,9 +59,16 @@ df = normalize_speech_content(
             "speaker_id": "PersonaExt2",
             "role": "Ministro de Hacienda",
         },
+        "GARCIA": {
+            "speaker_id": "PersonaAut9"
+        },
     },
 )
 ```
+
+Si el diccionario entrega solo un `speaker_id` que existe en `metadata.persons`
+del AKN, `normalize_speech_content` completa `speaker` y `speaker_href` desde la
+metadata oficial.
 
 ## Esquema MVP
 El JSON usa listas ordenadas en vez de claves `project_n` o `participation_n`.
@@ -96,6 +110,8 @@ Tipos de item del MVP:
 - `unlabeled_text`: agrupa parrafos directos consecutivos no etiquetados.
 - `votation`: viene de `debateSection name="Votacion"`.
 - `section`: contenedor generico para secciones anidadas no normalizadas aun.
+- `transcription_event`: eventos independientes de la transcripcion, por
+  ejemplo `-Aplausos.` o `(Aplausos en tribunas).`
 
 Las participaciones resuelven, cuando existe metadata:
 - `speaker_id`, `speaker`, `speaker_href`
@@ -112,6 +128,25 @@ de habla se transforman en `participation` con:
 - `discarded_preamble`: parrafos procedimentales previos al marcador.
 - `raw_content`: contenido original, incluyendo el marcador.
 - `content`: discurso atribuido al speaker, sin el marcador.
+
+Los preambulos procedimentales tambien quedan como `participation`, pero con:
+- `source_kind = "preamble"`.
+- `is_preamble = True`.
+- `type = "Preambulo procedimental"`.
+
+Esto permite filtrarlos de forma simple en etapas posteriores, sin perder
+trazabilidad sobre quien estaba pasando la palabra o conduciendo la sesion.
+
+Las interrupciones dentro de participaciones etiquetadas quedan como
+`participation` con:
+- `source_kind = "interruption"`.
+- `is_interruption = True`.
+- speaker resuelto por regex, metadata manual o metadata interna AKN cuando sea
+  posible.
+
+Los eventos de transcripcion tambien se separan dentro de participaciones
+etiquetadas. Si un evento como `(Aplausos)` corta una intervencion, el discurso
+posterior se conserva como otra participacion del mismo speaker.
 
 Las votaciones extraen:
 - `content`: parrafos/summary de la votacion.
