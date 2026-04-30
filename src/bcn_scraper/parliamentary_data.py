@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -35,6 +36,15 @@ BCNBIO_ORIGINAL_DATE = "http://datos.bcn.cl/ontologies/bcn-biographies#originalD
 
 RDFJson = Dict[str, Dict[str, List[Dict[str, object]]]]
 RDFJsonFetcher = Callable[[str], RDFJson]
+DEFAULT_RELEVANT_COLUMNS = [
+    "name",
+    "gender",
+    "nationality",
+    "birth_date",
+    "birth_place",
+    "image_url",
+    "current_party",
+]
 
 
 def canonical_resource_url(resource_url: str) -> str:
@@ -336,8 +346,8 @@ def fetch_parliamentarian_data(
     fetcher: Optional[RDFJsonFetcher] = None,
     include_all_militancies: bool = False,
     fetch_militancy_dates: bool = False,
-    timeout: int = 60,
-    max_attempts: int = 3,
+    timeout: int = 20,
+    max_attempts: int = 1,
     backoff_seconds: float = 2.0,
 ) -> Dict[str, object]:
     """Fetch BCN data for one parliamentarian/person resource."""
@@ -371,6 +381,80 @@ def fetch_parliamentarian_data(
         include_all_militancies=include_all_militancies,
         fetch_militancy_dates=fetch_militancy_dates,
     )
+
+
+def _is_missing_value(value: object) -> bool:
+    if value is None:
+        return True
+    try:
+        if pd.isna(value):
+            return True
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, str):
+        return not value.strip()
+    return False
+
+
+def _progress_label(prefix: str, current: int, total: int, width: int = 28) -> str:
+    if total <= 0:
+        return f"{prefix}: 0/0"
+    filled = int(width * current / total)
+    bar = "#" * filled + "-" * (width - filled)
+    return f"{prefix}: [{bar}] {current}/{total}"
+
+
+def _print_progress(prefix: str, current: int, total: int, *, enabled: bool) -> None:
+    if not enabled:
+        return
+    end = "\n" if current >= total else ""
+    sys.stderr.write("\r" + _progress_label(prefix, current, total) + end)
+    sys.stderr.flush()
+
+
+def parliamentarian_relevant_columns(
+    *,
+    include_all_militancies: bool = False,
+    fetch_militancy_dates: bool = False,
+) -> List[str]:
+    """Return columns expected for the selected enrichment depth."""
+    columns = list(DEFAULT_RELEVANT_COLUMNS)
+    if fetch_militancy_dates:
+        columns.extend(["current_militancy_start_date"])
+    if include_all_militancies:
+        columns.extend(["militancies"])
+    return columns
+
+
+def missing_parliamentarian_data_mask(
+    df: pd.DataFrame,
+    *,
+    relevant_columns: Optional[List[str]] = None,
+    include_all_militancies: bool = False,
+    fetch_militancy_dates: bool = False,
+    person_href_col: str = "person_href",
+) -> pd.Series:
+    """Mark rows with missing relevant BCN person fields."""
+    if person_href_col not in df.columns:
+        return pd.Series([False] * len(df), index=df.index)
+
+    columns = relevant_columns or parliamentarian_relevant_columns(
+        include_all_militancies=include_all_militancies,
+        fetch_militancy_dates=fetch_militancy_dates,
+    )
+    mask = df[person_href_col].map(is_bcn_person_url)
+    if "data_status" in df.columns:
+        mask = mask & (df["data_status"].fillna("") != "not_bcn_person")
+
+    missing_any = pd.Series([False] * len(df), index=df.index)
+    for column in columns:
+        if column not in df.columns:
+            missing_any = missing_any | mask
+        else:
+            missing_any = missing_any | df[column].map(_is_missing_value)
+    if "data_status" in df.columns:
+        missing_any = missing_any | (df["data_status"].fillna("") == "fetch_error")
+    return mask & missing_any
 
 
 def _parse_speech_value(value: object) -> Dict[str, object]:
@@ -487,9 +571,10 @@ def build_parliamentarian_table(
     fetcher: Optional[RDFJsonFetcher] = None,
     include_all_militancies: bool = False,
     fetch_militancy_dates: bool = False,
-    timeout: int = 60,
-    max_attempts: int = 3,
+    timeout: int = 20,
+    max_attempts: int = 1,
     backoff_seconds: float = 2.0,
+    show_progress: bool = True,
 ) -> pd.DataFrame:
     """Build one row per BCN person who appears as a speech participant."""
     refs = collect_bcn_speaker_references(df, source_col=source_col, as_dataframe=False)
@@ -500,7 +585,9 @@ def build_parliamentarian_table(
         backoff_seconds=backoff_seconds,
     )
     rows = []
-    for ref in refs:
+    total = len(refs)
+    _print_progress("BCN parliamentarians", 0, total, enabled=show_progress and total > 0)
+    for position, ref in enumerate(refs, start=1):
         person_href = ref["person_href"]
         try:
             person_data = loader(person_href)
@@ -519,4 +606,80 @@ def build_parliamentarian_table(
                 "error": str(exc),
             }
         rows.append({**ref, **details})
+        _print_progress("BCN parliamentarians", position, total, enabled=show_progress and total > 0)
     return pd.DataFrame(rows)
+
+
+def debug_parliamentarian_data_errors(
+    df: pd.DataFrame,
+    *,
+    person_href_col: str = "person_href",
+    relevant_columns: Optional[List[str]] = None,
+    fetcher: Optional[RDFJsonFetcher] = None,
+    include_all_militancies: bool = False,
+    fetch_militancy_dates: bool = False,
+    timeout: int = 60,
+    max_attempts: int = 3,
+    backoff_seconds: float = 2.0,
+    show_progress: bool = True,
+) -> pd.DataFrame:
+    """Retry only parliamentarian rows with missing relevant fields.
+
+    This is a second-pass helper for slow or partial BCN responses. The main
+    table builder uses fast defaults; this function focuses only on incomplete
+    rows and can be called with more patient network parameters.
+    """
+    result = df.copy()
+    if person_href_col not in result.columns:
+        return result
+
+    columns = relevant_columns or parliamentarian_relevant_columns(
+        include_all_militancies=include_all_militancies,
+        fetch_militancy_dates=fetch_militancy_dates,
+    )
+    for column in columns:
+        if column not in result.columns:
+            result[column] = None
+
+    mask = missing_parliamentarian_data_mask(
+        result,
+        relevant_columns=columns,
+        include_all_militancies=include_all_militancies,
+        fetch_militancy_dates=fetch_militancy_dates,
+        person_href_col=person_href_col,
+    )
+    indexes = list(result.index[mask])
+    loader = CachedRDFJsonFetcher(
+        fetcher,
+        timeout=timeout,
+        max_attempts=max_attempts,
+        backoff_seconds=backoff_seconds,
+    )
+
+    total = len(indexes)
+    _print_progress("BCN parliamentarian debug", 0, total, enabled=show_progress and total > 0)
+    for position, idx in enumerate(indexes, start=1):
+        person_href = result.at[idx, person_href_col]
+        try:
+            person_data = loader(str(person_href))
+            details = parse_parliamentarian_data(
+                str(person_href),
+                person_data,
+                loader,
+                include_all_militancies=include_all_militancies,
+                fetch_militancy_dates=fetch_militancy_dates,
+            )
+        except RuntimeError as exc:
+            details = {
+                "person_href": canonical_resource_url(str(person_href)),
+                "person_id": bcn_person_id(str(person_href)),
+                "data_status": "fetch_error",
+                "error": str(exc),
+            }
+
+        for key, value in details.items():
+            if key not in result.columns:
+                result[key] = None
+            result.at[idx, key] = value
+        _print_progress("BCN parliamentarian debug", position, total, enabled=show_progress and total > 0)
+    return result

@@ -17,8 +17,11 @@ from bcn_scraper.parliamentary_data import (
     build_parliamentarian_table,
     canonical_resource_url,
     collect_bcn_speaker_references,
+    debug_parliamentarian_data_errors,
     fetch_parliamentarian_data,
     is_bcn_person_url,
+    missing_parliamentarian_data_mask,
+    parliamentarian_relevant_columns,
     rdf_json_url,
 )
 
@@ -179,10 +182,78 @@ def test_build_parliamentarian_table_merges_speaker_refs_and_bcn_data():
     }
     df = pd.DataFrame({"speech_content": [speech_content]})
 
-    table = build_parliamentarian_table(df, fetcher=fixture_fetcher, include_all_militancies=False)
+    table = build_parliamentarian_table(
+        df,
+        fetcher=fixture_fetcher,
+        include_all_militancies=False,
+        show_progress=False,
+    )
 
     assert len(table) == 1
     assert table.loc[0, "person_href"] == PERSON
     assert table.loc[0, "name"] == "Ximena Rincón González"
     assert table.loc[0, "current_party"] == "Partido Demócratas Chile"
+    assert table.loc[0, "current_militancy_start_date"] is None
     assert "militancies" not in table.columns
+
+
+def test_parliamentarian_relevant_columns_follow_enrichment_flags():
+    assert "militancies" not in parliamentarian_relevant_columns()
+    assert "current_militancy_start_date" not in parliamentarian_relevant_columns()
+    assert "militancies" in parliamentarian_relevant_columns(include_all_militancies=True)
+    assert "current_militancy_start_date" in parliamentarian_relevant_columns(fetch_militancy_dates=True)
+
+
+def test_missing_parliamentarian_data_mask_detects_relevant_blanks():
+    df = pd.DataFrame({
+        "person_href": [PERSON, PERSON, "https://es.wikipedia.org/wiki/Jeannette_Jara"],
+        "name": ["Ximena Rincón González", "", ""],
+        "gender": ["mujer", "mujer", ""],
+        "nationality": ["Chile", "Chile", ""],
+        "birth_date": ["1968-07-05", "1968-07-05", ""],
+        "birth_place": ["Concepción", "Concepción", ""],
+        "image_url": ["https://example.test/img.jpg", "https://example.test/img.jpg", ""],
+        "current_party": ["Partido Demócratas Chile", "Partido Demócratas Chile", ""],
+    })
+
+    mask = missing_parliamentarian_data_mask(df)
+
+    assert mask.tolist() == [False, True, False]
+
+
+def test_debug_parliamentarian_data_errors_refetches_only_missing_rows():
+    complete_href = "http://datos.bcn.cl/recurso/persona/1778"
+    df = pd.DataFrame({
+        "person_href": [complete_href, PERSON],
+        "name": ["Juan Antonio Coloma Correa", ""],
+        "gender": ["hombre", None],
+        "nationality": ["Chile", None],
+        "birth_date": ["1956-07-15", None],
+        "birth_place": ["Santiago", None],
+        "image_url": ["https://example.test/1778.jpg", None],
+        "current_party": ["Partido Unión Demócrata Independiente", None],
+        "current_militancy_start_date": ["1990-03-11", None],
+        "militancies": [[{"is_current": True}], None],
+        "data_status": ["ok", "fetch_error"],
+    })
+    calls = []
+
+    def tracking_fetcher(resource_url):
+        calls.append(canonical_resource_url(resource_url))
+        return fixture_fetcher(resource_url)
+
+    repaired = debug_parliamentarian_data_errors(
+        df,
+        fetcher=tracking_fetcher,
+        include_all_militancies=True,
+        fetch_militancy_dates=True,
+        show_progress=False,
+    )
+
+    assert complete_href not in calls
+    assert PERSON in calls
+    assert repaired.loc[1, "data_status"] == "ok"
+    assert repaired.loc[1, "name"] == "Ximena Rincón González"
+    assert repaired.loc[1, "current_party"] == "Partido Demócratas Chile"
+    assert repaired.loc[1, "current_militancy_start_date"] == "2022-11-02"
+    assert len(repaired.loc[1, "militancies"]) == 2

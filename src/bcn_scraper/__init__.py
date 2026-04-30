@@ -27,10 +27,17 @@ from .historia_suggest import HistoriaSuggest, SuggestResult
 from .parliamentary_data import (
     build_parliamentarian_table,
     collect_bcn_speaker_references,
+    debug_parliamentarian_data_errors,
     fetch_parliamentarian_data,
     fetch_rdf_json,
     is_bcn_person_url,
+    missing_parliamentarian_data_mask,
+    parliamentarian_relevant_columns,
     rdf_json_url,
+)
+from .speech_dataframe import (
+    build_speech_analysis_dataframe,
+    flatten_speech_content,
 )
 from .wrapper import historia_dataframe_from_ley_o_boletin
 
@@ -59,10 +66,15 @@ __all__ = [
     "SuggestResult",
     "build_parliamentarian_table",
     "collect_bcn_speaker_references",
+    "debug_parliamentarian_data_errors",
     "fetch_parliamentarian_data",
     "fetch_rdf_json",
     "is_bcn_person_url",
+    "missing_parliamentarian_data_mask",
+    "parliamentarian_relevant_columns",
     "rdf_json_url",
+    "build_speech_analysis_dataframe",
+    "flatten_speech_content",
     "historia_dataframe_from_ley_o_boletin",
     "HistoriaXmlDownload",
 ]

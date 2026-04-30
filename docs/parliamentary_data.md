@@ -54,7 +54,8 @@ por `bcnbio:hasMilitancy` y se toma como actual la que no tiene
 `has_current_militancy=False`.
 
 Por velocidad, el default no descarga fechas de militancia ni incluye el
-historial completo:
+historial completo. Los parámetros de red también son conservadores por
+defecto: `timeout=20`, `max_attempts=1`.
 
 ```python
 person = fetch_parliamentarian_data(
@@ -141,6 +142,9 @@ data_normalized = normalize_speech_content(
 parliamentarians = build_parliamentarian_table(data_normalized)
 ```
 
+La función muestra una barra de progreso textual por defecto. Si estás en un
+contexto donde no quieres salida progresiva, usa `show_progress=False`.
+
 Para una tabla más completa, pero más lenta:
 
 ```python
@@ -154,11 +158,54 @@ parliamentarians = build_parliamentarian_table(
 )
 ```
 
+### `debug_parliamentarian_data_errors`
+
+Reintenta solo filas incompletas de una tabla parlamentaria ya construida:
+
+```python
+from bcn_scraper import debug_parliamentarian_data_errors
+
+parliamentarians = debug_parliamentarian_data_errors(
+    parliamentarians,
+    timeout=60,
+    max_attempts=3,
+    backoff_seconds=2,
+)
+```
+
+Por defecto considera relevantes estas columnas:
+
+```text
+name, gender, nationality, birth_date, birth_place, image_url, current_party
+```
+
+Si quieres depurar una tabla más profunda, debes repetir las mismas opciones:
+
+```python
+parliamentarians = debug_parliamentarian_data_errors(
+    parliamentarians,
+    include_all_militancies=True,
+    fetch_militancy_dates=True,
+    timeout=90,
+    max_attempts=3,
+    backoff_seconds=2,
+)
+```
+
+En ese caso también se revisan `militancies` y
+`current_militancy_start_date`. Esto importa: una fila completa en modo rápido
+puede ser incompleta para el modo profundo.
+
 ## Rendimiento y red
 
 BCN puede responder lento en recursos enlazados. El fetcher usa cache por URL,
 `timeout`, `max_attempts` y `backoff_seconds`. El flujo recomendado para muchas
 personas es partir con el default y activar fechas/historial completo solo si
-esas variables serán usadas en el análisis.
+esas variables serán usadas en el análisis. Para datasets grandes, conviene:
+
+1. Construir la tabla rápida con `build_parliamentarian_table(...)`.
+2. Revisar cuántos datos faltan.
+3. Ejecutar `debug_parliamentarian_data_errors(...)` solo sobre filas
+   incompletas.
 
 Los tests unitarios usan fixtures RDF/JSON sintéticos y no dependen de red.

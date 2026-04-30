@@ -118,7 +118,38 @@ parliamentarians = build_parliamentarian_table(df)
 normalizado, detecta speakers con `speaker_href` de `datos.bcn.cl` y agrega
 nombre BCN, género, nacionalidad, nacimiento, imagen y partido actual. Por
 defecto evita descargar fechas de militancia para mantener el proceso ágil; se
-pueden activar con `fetch_militancy_dates=True`.
+pueden activar con `fetch_militancy_dates=True`. Las funciones largas muestran
+barra de progreso por defecto.
+
+Para una segunda pasada más paciente sobre filas incompletas:
+
+```python
+from bcn_scraper import debug_parliamentarian_data_errors
+
+parliamentarians = debug_parliamentarian_data_errors(
+    parliamentarians,
+    timeout=60,
+    max_attempts=3,
+    backoff_seconds=2,
+)
+```
+
+## DataFrame de discurso
+```python
+from bcn_scraper import build_speech_analysis_dataframe
+
+speech_df = build_speech_analysis_dataframe(
+    df,
+    parliamentarians=parliamentarians,
+)
+```
+
+`build_speech_analysis_dataframe` aplana `speech_content` normalizado a una fila
+por participación discursiva y fusiona datos BCN por
+`speaker_href == person_href`. Por defecto excluye preámbulos, eventos de
+transcripción y bloques no resueltos; se pueden conservar para auditoría con
+`include_preambles=True`, `include_transcription_events=True` e
+`include_unresolved=True`.
 
 ## Notas
 - Los tests evitan red y usan archivos locales en `data/`.

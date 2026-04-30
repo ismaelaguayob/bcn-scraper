@@ -6,6 +6,7 @@ Archivos disponibles:
 - `akoma_ntoso.md`: descarga y validación de XML Akoma Ntoso.
 - `akoma_speech.md`: extracción de discurso estructurado desde Akoma Ntoso.
 - `parliamentary_data.md`: extracción de metadata BCN para speakers parlamentarios.
+- `speech_dataframe.md`: DataFrame plano de participaciones para análisis.
 - `historia_client.md`: HistoriaClient y HistoriaPayload.
 - `historia_lookup.md`: HistoriaLookup y HistoriaSearchResult.
 - `historia_suggest.md`: HistoriaSuggest y SuggestResult.
