@@ -28,9 +28,10 @@ SPEECH_MARKER_RE = re.compile(
     r"^(?P<prefix>(?:El|La)\s+"
     r"(?:señor|señora|señorita|ministro|ministra|subsecretario|subsecretaria|"
     r"senador|senadora|diputado|diputada))\s+"
-    r"(?P<body>.+?)\s*\.\s*-$",
+    r"(?P<body>.+?)\s*\.\s*[-–—]\s*\.?$",
     re.IGNORECASE,
 )
+HONORIFIC_NAME_RE = re.compile(r"^(?:don|doña)\s+(?P<name>.+)$", re.IGNORECASE)
 PROCEDURAL_PROMPT_RE = re.compile(
     r"\b("
     r"tiene la palabra|"
@@ -45,14 +46,42 @@ PROCEDURAL_PROMPT_RE = re.compile(
 TRANSCRIPTION_EVENT_RE = re.compile(
     r"^\s*(?:[-–—]\s*)?(?:\([^)]*\))?\s*"
     r"(?:[-–—]\s*)?"
-    r".*\b(aplausos?|risas?|manifestaciones|murmullos|protestas)\b.*"
+    r".*\b(aplausos?|risas?|manifestaciones|murmullos|protestas|"
+    r"hablan\s+varios?|interviene\s+fuera\s+de\s+micr[oó]fono)\b.*"
     r"(?:\.\s*)?(?:\))?\s*$",
+    re.IGNORECASE,
+)
+PARENTHETICAL_EVENT_RE = re.compile(
+    r"^\s*(?:[-–—]\s*)?\([^()]+\)\s*\.?\s*$",
+    re.IGNORECASE,
+)
+DOCUMENT_SEPARATOR_RE = re.compile(
+    r"^\s*(?:[-–—]\s*[o0]\s*[-–—]|[-–—_=*·]{3,})\s*\.?\s*$",
     re.IGNORECASE,
 )
 VOTE_TOTAL_KEYS = {
     "totalVotosAFavor": "in_favor",
     "totalVotosEnContra": "against",
     "totalVotosSeAbstiene": "abstention",
+}
+BCN_PERSON_HREF_RE = re.compile(r"/recurso/persona/(?P<person_id>[^/?#]+)")
+NAME_CONTEXT_STOPWORDS = {
+    "DE",
+    "DEL",
+    "EL",
+    "LA",
+    "LAS",
+    "LOS",
+    "Y",
+    "DON",
+    "DONA",
+    "DIPUTADO",
+    "DIPUTADA",
+    "SENADOR",
+    "SENADORA",
+    "SENOR",
+    "SENORA",
+    "SENORITA",
 }
 
 
@@ -101,7 +130,12 @@ def is_procedural_prompt(text: str) -> bool:
 
 def is_transcription_event(text: str) -> bool:
     """Return True for standalone transcription events such as applause."""
-    return bool(TRANSCRIPTION_EVENT_RE.match(clean_text(text)))
+    cleaned = clean_text(text)
+    return bool(
+        TRANSCRIPTION_EVENT_RE.match(cleaned)
+        or PARENTHETICAL_EVENT_RE.match(cleaned)
+        or DOCUMENT_SEPARATOR_RE.match(cleaned)
+    )
 
 
 def direct_children(elem: ET.Element) -> List[ET.Element]:
@@ -590,6 +624,28 @@ def resolve_public_metadata(metadata: Dict[str, Dict[str, Dict[str, str]]], ref:
     return {}
 
 
+def resolve_public_metadata_by_href(
+    metadata: Dict[str, Dict[str, Dict[str, str]]],
+    href: str,
+) -> Dict[str, str]:
+    """Resolve a stable resource URL against public speech metadata."""
+    expected = str(href or "").strip().rstrip("/")
+    if not expected:
+        return {}
+    for collection in ("persons", "roles", "organizations", "references"):
+        for entry in (metadata.get(collection, {}) or {}).values():
+            observed = str(entry.get("href") or "").strip().rstrip("/")
+            if observed and observed == expected:
+                return entry
+    return {}
+
+
+def canonical_bcn_speaker_id(href: str) -> str:
+    """Return a stable speaker id derived from a BCN person resource URL."""
+    match = BCN_PERSON_HREF_RE.search(str(href or ""))
+    return f"PersonaBCN{match.group('person_id')}" if match else ""
+
+
 def is_missing_akn_content(value) -> bool:
     """Return True for empty/NA values commonly produced by pandas."""
     if value is None:
@@ -626,8 +682,21 @@ def detect_speech_marker(paragraph: str) -> Optional[Dict[str, str]]:
 
     body = clean_text(match.group("body"))
     parentheticals = [clean_text(value) for value in re.findall(r"\(([^)]*)\)", body) if clean_text(value)]
+    name_qualifiers = []
+    role_parentheticals = []
+    for value in parentheticals:
+        honorific_name = HONORIFIC_NAME_RE.match(value)
+        if honorific_name:
+            name_qualifiers.append(clean_text(honorific_name.group("name")))
+        else:
+            role_parentheticals.append(value)
     name_text = clean_text(re.sub(r"\([^)]*\)", "", body))
-    name_text = clean_text(name_text.split(",", 1)[0])
+    name_parts = name_text.split(",", 1)
+    name_text = clean_text(name_parts[0])
+    if len(name_parts) == 2:
+        honorific_name = HONORIFIC_NAME_RE.match(clean_text(name_parts[1]))
+        if honorific_name:
+            name_qualifiers.append(clean_text(honorific_name.group("name")))
     speaker_key = normalize_text_key(name_text)
     if not speaker_key:
         return None
@@ -636,9 +705,106 @@ def detect_speech_marker(paragraph: str) -> Optional[Dict[str, str]]:
         "marker": text,
         "speaker_key": speaker_key,
         "speaker_display": name_text,
-        "role_from_marker": "; ".join(parentheticals),
+        "name_qualifiers": name_qualifiers,
+        "role_from_marker": "; ".join(role_parentheticals),
         "prefix": clean_text(match.group("prefix")),
     }
+
+
+def resolve_unique_person_from_marker(
+    metadata: Dict[str, Dict[str, Dict[str, str]]],
+    marker: Dict[str, object],
+    context_paragraphs: Optional[Iterable[str]] = None,
+) -> Dict[str, str]:
+    """Resolve a marker only when its name hints identify one credible person.
+
+    Bare, one-token surnames are not trusted against ordinary AKN metadata: that
+    metadata also contains people who are merely mentioned in the session.  They
+    are accepted when the metadata comes from an explicit corpus speaker registry
+    or when the immediately preceding procedural prompt disambiguates the person.
+    """
+    speaker_tokens = set(normalize_text_key(str(marker.get("speaker_key") or "")).split())
+    qualifier_tokens = {
+        token
+        for value in marker.get("name_qualifiers", []) or []
+        for token in normalize_text_key(str(value)).split()
+    }
+    if not speaker_tokens:
+        return {}
+
+    context_values = [clean_text(str(value)) for value in (context_paragraphs or []) if clean_text(str(value))]
+    procedural_context = [value for value in context_values if is_procedural_prompt(value)]
+    context_text = procedural_context[-1] if procedural_context else ""
+    context_tokens = set(normalize_text_key(context_text).split())
+
+    matches: Dict[str, List[Dict[str, str]]] = {}
+    for person in (metadata.get("persons", {}) or {}).values():
+        name_tokens = set(normalize_text_key(person.get("show_as", "")).split())
+        if not speaker_tokens.issubset(name_tokens):
+            continue
+        # Some BCN names omit a middle given name printed in the marker (for
+        # example, "Ana María Bravo" appears as "ana bravo castro").  A partial
+        # qualifier match remains useful, while the uniqueness check below keeps
+        # it conservative.
+        if qualifier_tokens and not qualifier_tokens.intersection(name_tokens):
+            continue
+        identity_key = person.get("href") or normalize_text_key(person.get("show_as", ""))
+        if identity_key:
+            matches.setdefault(identity_key, []).append(person)
+
+    if not matches:
+        return {}
+
+    resolution_method = "akn_unique"
+    if len(matches) > 1:
+        scored = []
+        for identity_key, candidates in matches.items():
+            candidate_tokens = set().union(*(
+                set(normalize_text_key(candidate.get("show_as", "")).split())
+                for candidate in candidates
+            ))
+            identifying_tokens = candidate_tokens - speaker_tokens - NAME_CONTEXT_STOPWORDS
+            score = len(identifying_tokens.intersection(context_tokens))
+            scored.append((score, identity_key, candidates))
+        best_score = max(score for score, _, _ in scored)
+        winners = [entry for entry in scored if entry[0] == best_score]
+        if best_score <= 0 or len(winners) != 1:
+            return {}
+        candidates = winners[0][2]
+        resolution_method = "akn_context"
+    else:
+        candidates = next(iter(matches.values()))
+        is_bare_surname = len(speaker_tokens) == 1 and not qualifier_tokens
+        from_speaker_registry = all(
+            bool(candidate.get("registry_source")) for candidate in candidates
+        )
+        has_context_match = any(
+            (
+                set(normalize_text_key(candidate.get("show_as", "")).split())
+                - speaker_tokens
+                - NAME_CONTEXT_STOPWORDS
+            )
+            .intersection(context_tokens)
+            for candidate in candidates
+        )
+        if is_bare_surname and not from_speaker_registry and not has_context_match:
+            return {}
+        if from_speaker_registry:
+            resolution_method = "corpus_registry"
+        elif has_context_match:
+            resolution_method = "akn_context"
+
+    resolved = next(
+        (
+            candidate
+            for candidate in candidates
+            if "/recurso/persona/" in str(candidate.get("href") or "")
+        ),
+        candidates[0],
+    )
+    resolved = dict(resolved)
+    resolved["_resolution_method"] = resolution_method
+    return resolved
 
 
 class ExternalSpeakerRegistry:
@@ -646,6 +812,7 @@ class ExternalSpeakerRegistry:
 
     def __init__(self, external_speakers: Optional[Dict[str, Dict[str, str]]] = None) -> None:
         self._speakers: Dict[str, Dict[str, str]] = {}
+        self._provided_keys = set()
         self._next_id = 1
         for key, value in (external_speakers or {}).items():
             normalized_key = normalize_text_key(key)
@@ -654,6 +821,7 @@ class ExternalSpeakerRegistry:
             entry = dict(value or {})
             entry.setdefault("speaker_key", normalized_key)
             self._speakers[normalized_key] = entry
+            self._provided_keys.add(normalized_key)
 
     def _next_external_id(self) -> str:
         used_ids = {entry.get("speaker_id") for entry in self._speakers.values()}
@@ -667,18 +835,39 @@ class ExternalSpeakerRegistry:
         self,
         marker: Dict[str, str],
         metadata: Optional[Dict[str, Dict[str, Dict[str, str]]]] = None,
+        context_paragraphs: Optional[Iterable[str]] = None,
     ) -> Dict[str, object]:
         """Resolve a marker to user-provided or generated speaker metadata."""
         speaker_key = marker["speaker_key"]
         entry = dict(self._speakers.get(speaker_key, {}))
-        user_provided = bool(entry)
+        user_provided = speaker_key in self._provided_keys
         if not entry:
             entry = {"speaker_key": speaker_key}
 
-        metadata_entry = {}
-        if entry.get("speaker_id") and metadata:
+        metadata_entry: Dict[str, str] = {}
+        stable_href = entry.get("speaker_href") or entry.get("href")
+        if user_provided and stable_href and metadata:
+            metadata_entry = resolve_public_metadata_by_href(metadata, str(stable_href))
+        if user_provided and not metadata_entry and entry.get("speaker_id") and metadata:
             metadata_entry = resolve_public_metadata(metadata, entry["speaker_id"])
+        elif not user_provided and metadata:
+            metadata_entry = resolve_unique_person_from_marker(
+                metadata,
+                marker,
+                context_paragraphs=context_paragraphs,
+            )
+            if metadata_entry:
+                entry = {
+                    "speaker_key": speaker_key,
+                    "speaker_id": metadata_entry.get("id"),
+                }
 
+        if metadata_entry.get("id"):
+            # AKN IDs are document-local.  Resolve the stable href first and then
+            # use the ID belonging to this specific document/registry.
+            entry["speaker_id"] = metadata_entry["id"]
+        if not entry.get("speaker_id") and canonical_bcn_speaker_id(str(stable_href or "")):
+            entry["speaker_id"] = canonical_bcn_speaker_id(str(stable_href))
         if not entry.get("speaker_id"):
             entry["speaker_id"] = self._next_external_id()
         if not entry.get("speaker"):
@@ -693,11 +882,23 @@ class ExternalSpeakerRegistry:
             entry["speaker_href"] = metadata_entry["href"]
 
         entry.setdefault("speaker_key", speaker_key)
-        entry["speaker_resolution_status"] = "user_provided" if user_provided else "regex"
-        if metadata_entry:
-            entry["speaker_source"] = "akn_metadata"
+        stable_bcn_href = canonical_bcn_speaker_id(str(entry.get("speaker_href") or entry.get("href") or ""))
+        if user_provided and stable_bcn_href:
+            entry["speaker_resolution_status"] = "stable_href"
         elif user_provided:
-            entry["speaker_source"] = "manual"
+            entry["speaker_resolution_status"] = "user_provided"
+        elif metadata_entry:
+            entry["speaker_resolution_status"] = metadata_entry.get("_resolution_method", "akn_unique")
+        else:
+            entry["speaker_resolution_status"] = "regex"
+        if metadata_entry:
+            entry["speaker_source"] = (
+                "corpus_registry"
+                if metadata_entry.get("registry_source")
+                else "akn_metadata"
+            )
+        elif user_provided:
+            entry.setdefault("speaker_source", "manual")
         else:
             entry["speaker_source"] = "regex"
         self._speakers[speaker_key] = entry
@@ -730,6 +931,7 @@ def external_participation_item(
         "role_id": speaker.get("role_id"),
         "role": speaker.get("role"),
         "speaker_resolution_status": speaker.get("speaker_resolution_status"),
+        "speaker_source": speaker.get("speaker_source"),
         "is_labeled": False,
         "content": content,
         "raw_content": raw_content,
@@ -810,7 +1012,7 @@ def interruption_participation_item(
         "is_labeled": False,
         "is_interruption": True,
         "content": content,
-        "raw_content": content,
+        "raw_content": [marker.get("marker")] + content,
         "discarded_preamble": [],
     }
 
@@ -831,16 +1033,21 @@ def split_unlabeled_item(
     current_speaker = None
     current_content: List[str] = []
     current_raw: List[str] = []
+    current_has_marker = False
     current_procedural: List[str] = []
     pre_marker_preamble: List[str] = []
     last_marker = None
     last_speaker = None
 
     def flush_current() -> None:
-        nonlocal current_marker, current_speaker, current_content, current_raw, current_procedural
+        nonlocal current_marker, current_speaker, current_content, current_raw, current_procedural, current_has_marker
         if current_marker and current_speaker:
             if current_content:
-                raw_content = ([current_marker["marker"]] if current_raw else []) + current_procedural + current_content
+                raw_content = (
+                    ([current_marker["marker"]] if current_has_marker else [])
+                    + current_procedural
+                    + current_content
+                )
                 result.append(external_participation_item(
                     marker=current_marker,
                     speaker=current_speaker,
@@ -861,6 +1068,7 @@ def split_unlabeled_item(
         current_content = []
         current_raw = []
         current_procedural = []
+        current_has_marker = False
 
     def flush_pre_marker_preamble() -> None:
         nonlocal pre_marker_preamble
@@ -874,11 +1082,17 @@ def split_unlabeled_item(
     for paragraph in paragraphs:
         marker = detect_speech_marker(paragraph)
         if marker:
+            resolution_context = list(pre_marker_preamble) + list(current_procedural)
             flush_current()
             flush_pre_marker_preamble()
             current_marker = marker
-            current_speaker = registry.resolve(marker, metadata)
+            current_speaker = registry.resolve(
+                marker,
+                metadata,
+                context_paragraphs=resolution_context,
+            )
             current_raw = [paragraph]
+            current_has_marker = True
             current_content = []
             current_procedural = []
             last_marker = current_marker
@@ -895,6 +1109,7 @@ def split_unlabeled_item(
                 current_raw = []
                 current_content = []
                 current_procedural = []
+                current_has_marker = False
             continue
 
         if current_marker:
@@ -972,7 +1187,7 @@ def clean_labeled_participation_item(
             has_procedural_prompt = any(is_procedural_prompt(paragraph) for paragraph in current_segment)
             if has_procedural_prompt:
                 output.append(preamble_participation_item(
-                    content=current_segment,
+                    content=[current_marker["marker"]] + current_segment,
                     source_id=item.get("id"),
                     marker=current_marker,
                     speaker=current_speaker,
@@ -1008,7 +1223,7 @@ def clean_labeled_participation_item(
             current_mode = "interruption"
             current_marker = marker
             current_speaker = registry.resolve(marker, metadata)
-            current_segment = [paragraph]
+            current_segment = []
             continue
 
         current_segment.append(paragraph)
@@ -1121,12 +1336,135 @@ def parse_speech_content_value(value) -> Dict[str, object]:
     return {"error": "invalid_speech_content_type", "type": type(value).__name__}
 
 
+def collect_akn_person_identities(
+    df,
+    *,
+    source_col: str = "speech_content",
+):
+    """Return document-local AKN IDs alongside stable BCN person resources.
+
+    The result deliberately keeps one row per document/person mapping.  A ``perN``
+    or ``PersonaAutN`` value is only meaningful together with ``document_uri``;
+    ``speaker_href`` and ``person_id`` are the cross-document identifiers.
+    """
+    try:
+        import pandas as pd
+    except ImportError as e:
+        raise ImportError("pandas is required for collect_akn_person_identities") from e
+
+    columns = [
+        "document_uri",
+        "title",
+        "date",
+        "local_speaker_id",
+        "speaker_href",
+        "person_id",
+        "speaker_name",
+        "name_key",
+        "document_person_key",
+        "local_id_reused_across_people",
+        "stable_person_uses_multiple_local_ids",
+        "stable_person_has_name_conflict",
+    ]
+    if source_col not in df.columns:
+        return pd.DataFrame(columns=columns)
+
+    rows = []
+    for row_index, row in df.iterrows():
+        speech_content = parse_speech_content_value(row[source_col])
+        persons = speech_content.get("metadata", {}).get("persons", {})
+        if not isinstance(persons, dict):
+            continue
+        document_uri = str(row.get("document_uri") or "").strip()
+        for local_id, person in persons.items():
+            if not isinstance(person, dict):
+                continue
+            local_speaker_id = str(person.get("id") or local_id or "").strip()
+            speaker_href = str(person.get("href") or "").strip().rstrip("/")
+            match = BCN_PERSON_HREF_RE.search(speaker_href)
+            person_id = match.group("person_id") if match else ""
+            speaker_name = clean_text(str(person.get("show_as") or person.get("name") or ""))
+            rows.append({
+                "source_row_index": row_index,
+                "document_uri": document_uri,
+                "title": row.get("title"),
+                "date": row.get("date"),
+                "local_speaker_id": local_speaker_id,
+                "speaker_href": speaker_href,
+                "person_id": person_id,
+                "speaker_name": speaker_name,
+                "name_key": normalize_text_key(speaker_name),
+                "document_person_key": (
+                    f"{document_uri}#{local_speaker_id}"
+                    if document_uri and local_speaker_id
+                    else ""
+                ),
+            })
+
+    result = pd.DataFrame(rows)
+    if result.empty:
+        return pd.DataFrame(columns=["source_row_index", *columns])
+    result = result.drop_duplicates(
+        subset=["document_uri", "local_speaker_id", "speaker_href", "speaker_name"]
+    ).reset_index(drop=True)
+
+    eligible = result["speaker_href"].ne("")
+    local_people = result.loc[eligible].groupby("local_speaker_id")["speaker_href"].nunique()
+    stable_local_ids = result.loc[eligible].groupby("speaker_href")["local_speaker_id"].nunique()
+    stable_names = result.loc[eligible].groupby("speaker_href")["name_key"].nunique()
+    result["local_id_reused_across_people"] = (
+        result["local_speaker_id"].map(local_people).fillna(0).gt(1)
+    )
+    result["stable_person_uses_multiple_local_ids"] = (
+        result["speaker_href"].map(stable_local_ids).fillna(0).gt(1)
+    )
+    result["stable_person_has_name_conflict"] = (
+        result["speaker_href"].map(stable_names).fillna(0).gt(1)
+    )
+    return result[["source_row_index", *columns]]
+
+
+def build_corpus_person_registry(
+    df,
+    *,
+    source_col: str = "speech_content",
+) -> Dict[str, Dict[str, str]]:
+    """Build stable person metadata by pooling BCN hrefs from parsed AKN docs."""
+    identities = collect_akn_person_identities(df, source_col=source_col)
+    if identities.empty:
+        return {}
+    identities = identities.loc[identities["person_id"].ne("")].copy()
+    registry: Dict[str, Dict[str, str]] = {}
+    for speaker_href, group in identities.groupby("speaker_href", sort=True):
+        names = [name for name in group["speaker_name"].tolist() if clean_text(str(name))]
+        speaker_name = (
+            sorted(
+                set(names),
+                key=lambda name: (-names.count(name), normalize_text_key(name), name),
+            )[0]
+            if names
+            else ""
+        )
+        stable_id = canonical_bcn_speaker_id(speaker_href)
+        if not stable_id:
+            continue
+        registry[stable_id] = {
+            "kind": "person",
+            "id": stable_id,
+            "show_as": speaker_name,
+            "href": speaker_href,
+            "registry_source": "corpus_akn",
+        }
+    return registry
+
+
 def normalize_speech_content(
     df,
     *,
     source_col: str = "speech_content",
     output_col: str = "speech_content",
     external_speakers: Optional[Dict[str, Dict[str, str]]] = None,
+    document_speaker_overrides: Optional[Dict[str, Dict[str, Dict[str, str]]]] = None,
     split_unlabeled: bool = True,
     clean_labeled: bool = True,
     split_transcription_events: bool = True,
@@ -1134,13 +1472,12 @@ def normalize_speech_content(
 ):
     """Normalize speech_content for analysis, including unlabeled speaker splits."""
     result = df.copy()
-    registry = ExternalSpeakerRegistry(external_speakers)
 
     if source_col not in result.columns:
         result[output_col] = "" if as_json else None
         return result
 
-    def convert(value):
+    def convert(value, registry):
         parsed = parse_speech_content_value(value)
         normalized = normalize_speech_dict(
             parsed,
@@ -1153,7 +1490,26 @@ def normalize_speech_content(
             return json.dumps(normalized, ensure_ascii=False)
         return normalized
 
-    result[output_col] = result[source_col].map(convert)
+    if not document_speaker_overrides:
+        registry = ExternalSpeakerRegistry(external_speakers)
+        result[output_col] = result[source_col].map(lambda value: convert(value, registry))
+        return result
+
+    def convert_row(row):
+        row_speakers = {
+            key: dict(value or {})
+            for key, value in (external_speakers or {}).items()
+        }
+        for column in ("document_uri", "akn_url", "title"):
+            document_key = str(row.get(column) or "").strip()
+            overrides = document_speaker_overrides.get(document_key, {})
+            for speaker_key, override in overrides.items():
+                speaker = dict(row_speakers.get(speaker_key, {}))
+                speaker.update(override or {})
+                row_speakers[speaker_key] = speaker
+        return convert(row[source_col], ExternalSpeakerRegistry(row_speakers))
+
+    result[output_col] = result.apply(convert_row, axis=1)
     return result
 
 
@@ -1164,7 +1520,7 @@ def collect_unlabeled_speaker_candidates(
     external_speakers: Optional[Dict[str, Dict[str, str]]] = None,
     as_dataframe: bool = True,
 ):
-    """Collect regex-detected unlabeled speakers that need manual metadata."""
+    """Collect regex-detected speakers and report their current resolution status."""
     manual = {
         normalize_text_key(key): dict(value or {})
         for key, value in (external_speakers or {}).items()
@@ -1172,7 +1528,12 @@ def collect_unlabeled_speaker_candidates(
     }
     candidates: Dict[str, Dict[str, object]] = {}
 
-    def add_candidate(marker: Dict[str, str], example: str, context: Dict[str, object]) -> None:
+    def add_candidate(
+        marker: Dict[str, str],
+        example: str,
+        context: Dict[str, object],
+        resolved_item: Optional[Dict[str, object]] = None,
+    ) -> None:
         speaker_key = marker["speaker_key"]
         entry = candidates.setdefault(speaker_key, {
             "speaker_key": speaker_key,
@@ -1181,6 +1542,12 @@ def collect_unlabeled_speaker_candidates(
             "n_occurrences": 0,
             "examples": [],
             "documents": [],
+            "_resolved_speakers": set(),
+            "_resolved_speaker_ids": set(),
+            "_resolved_speaker_hrefs": set(),
+            "_resolved_roles": set(),
+            "_resolution_statuses": set(),
+            "_speaker_sources": set(),
         })
         entry["n_occurrences"] += 1
         if example and len(entry["examples"]) < 3:
@@ -1195,6 +1562,19 @@ def collect_unlabeled_speaker_candidates(
         if document not in entry["documents"] and len(entry["documents"]) < 5:
             entry["documents"].append(document)
 
+        if resolved_item:
+            observed_fields = {
+                "_resolved_speakers": resolved_item.get("speaker"),
+                "_resolved_speaker_ids": resolved_item.get("speaker_id"),
+                "_resolved_speaker_hrefs": resolved_item.get("speaker_href"),
+                "_resolved_roles": resolved_item.get("role"),
+                "_resolution_statuses": resolved_item.get("speaker_resolution_status"),
+                "_speaker_sources": resolved_item.get("speaker_source"),
+            }
+            for field, value in observed_fields.items():
+                if value is not None and str(value).strip():
+                    entry[field].add(str(value).strip())
+
     def visit(value, context: Dict[str, object]) -> None:
         if isinstance(value, dict):
             if value.get("kind") == "unlabeled_text":
@@ -1202,14 +1582,17 @@ def collect_unlabeled_speaker_candidates(
                     marker = detect_speech_marker(paragraph)
                     if marker:
                         add_candidate(marker, clean_text(paragraph), context)
-            elif value.get("kind") == "participation" and value.get("source_kind") == "unlabeled_text":
+            elif (
+                value.get("kind") == "participation"
+                and value.get("source_kind") in {"unlabeled_text", "interruption"}
+            ):
                 marker = {
                     "speaker_key": value.get("speaker_key") or normalize_text_key(value.get("speaker", "")),
                     "speaker_display": value.get("speaker_display") or value.get("speaker", ""),
                     "role_from_marker": value.get("role") or "",
                 }
                 if marker["speaker_key"]:
-                    add_candidate(marker, value.get("speaker_marker") or "", context)
+                    add_candidate(marker, value.get("speaker_marker") or "", context, value)
             for child in value.values():
                 visit(child, context)
         elif isinstance(value, list):
@@ -1231,11 +1614,102 @@ def collect_unlabeled_speaker_candidates(
         rows = []
         for speaker_key, entry in sorted(candidates.items()):
             manual_entry = manual.get(speaker_key, {})
+
+            resolved_values = {
+                "speaker": sorted(entry.pop("_resolved_speakers")),
+                "speaker_id": sorted(entry.pop("_resolved_speaker_ids")),
+                "speaker_href": sorted(entry.pop("_resolved_speaker_hrefs")),
+                "role": sorted(entry.pop("_resolved_roles")),
+            }
+            resolution_statuses = sorted(entry.pop("_resolution_statuses"))
+            speaker_sources = sorted(entry.pop("_speaker_sources"))
+
+            normalized_speakers = {
+                normalize_text_key(value) for value in resolved_values["speaker"] if value
+            }
+            normalized_hrefs = {
+                value.strip().lower() for value in resolved_values["speaker_href"] if value
+            }
+            normalized_ids = {
+                value.strip().lower() for value in resolved_values["speaker_id"] if value
+            }
+            normalized_roles = {
+                normalize_text_key(value) for value in resolved_values["role"] if value
+            }
+            # A surname key can legitimately identify different people in
+            # different documents or occurrences (for example, ARAYA in the
+            # Senate and Jaime/Cristián Araya in the Chamber).  Multiple stable
+            # hrefs are therefore descriptive, not automatically a conflict.
+            has_multiple_resolved_identities = (
+                len(normalized_hrefs) > 1
+                or (not normalized_hrefs and len(normalized_speakers) > 1)
+            )
+            has_resolution_conflict = (
+                (len(normalized_hrefs) <= 1 and len(normalized_speakers) > 1)
+                or (
+                    not normalized_hrefs
+                    and len(normalized_speakers) <= 1
+                    and len(normalized_ids) > 1
+                )
+            )
+            has_role_conflict = len(normalized_roles) > 1
+
+            manual_speaker = manual_entry.get("speaker", "")
+            manual_href = manual_entry.get("speaker_href") or manual_entry.get("href", "")
+            manual_id = manual_entry.get("speaker_id", "")
+            if manual_speaker and normalized_speakers:
+                has_resolution_conflict |= normalize_text_key(manual_speaker) not in normalized_speakers
+            if manual_href and normalized_hrefs:
+                has_resolution_conflict |= manual_href.strip().lower() not in normalized_hrefs
+            if manual_id and normalized_ids and not normalized_hrefs:
+                has_resolution_conflict |= manual_id.strip().lower() not in normalized_ids
+
+            effective = {}
+            for field, values in resolved_values.items():
+                manual_value = manual_entry.get(field)
+                if field == "speaker_href" and not manual_value:
+                    manual_value = manual_entry.get("href")
+                effective[field] = manual_value or (values[0] if len(values) == 1 else "")
+
             missing_fields = [
                 field
                 for field in ("speaker", "speaker_id", "speaker_href", "role")
-                if not manual_entry.get(field)
+                if not effective.get(field)
             ]
+
+            has_identity = bool(
+                (
+                    resolved_values["speaker"]
+                    and (resolved_values["speaker_id"] or resolved_values["speaker_href"])
+                )
+                or (
+                    effective.get("speaker")
+                    and (effective.get("speaker_id") or effective.get("speaker_href"))
+                )
+            )
+            regex_only = (
+                not manual_entry
+                and bool(resolution_statuses)
+                and set(resolution_statuses) == {"regex"}
+            )
+            has_unresolved_resolution = bool(
+                {"regex", "unresolved"}.intersection(resolution_statuses)
+            )
+            if has_resolution_conflict:
+                identity_status = "conflict"
+            elif regex_only:
+                identity_status = "regex_only"
+            elif has_unresolved_resolution or not has_identity:
+                identity_status = "unresolved"
+            else:
+                identity_status = "resolved"
+
+            if identity_status == "resolved" and has_multiple_resolved_identities:
+                missing_fields = []
+                metadata_status = "multiple_resolved"
+            else:
+                metadata_status = "complete" if not missing_fields else "incomplete"
+
             rows.append({
                 **entry,
                 "first_row_index": entry["documents"][0]["row_index"] if entry["documents"] else None,
@@ -1248,8 +1722,22 @@ def collect_unlabeled_speaker_candidates(
                 "manual_speaker_id": manual_entry.get("speaker_id", ""),
                 "manual_speaker_href": manual_entry.get("speaker_href") or manual_entry.get("href", ""),
                 "manual_role": manual_entry.get("role", ""),
+                "resolved_speaker": effective["speaker"],
+                "resolved_speaker_id": effective["speaker_id"],
+                "resolved_speaker_href": effective["speaker_href"],
+                "resolved_role": effective["role"],
+                "observed_speakers": resolved_values["speaker"],
+                "observed_speaker_ids": resolved_values["speaker_id"],
+                "observed_speaker_hrefs": resolved_values["speaker_href"],
+                "observed_roles": resolved_values["role"],
+                "resolution_statuses": resolution_statuses,
+                "speaker_sources": speaker_sources,
+                "has_resolution_conflict": has_resolution_conflict,
+                "has_multiple_resolved_identities": has_multiple_resolved_identities,
+                "has_role_conflict": has_role_conflict,
+                "identity_status": identity_status,
                 "missing_fields": missing_fields,
-                "metadata_status": "complete" if manual_entry and not missing_fields else "incomplete",
+                "metadata_status": metadata_status,
             })
 
     if not as_dataframe:

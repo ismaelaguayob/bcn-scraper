@@ -40,6 +40,7 @@ def test_historia_tramites_to_dataframe_order_and_clean():
     assert df.loc[0, 'title'] == 'Tramite 1'
     assert df.loc[0, 'excerpt'] == 'Detalle'
     assert df.loc[0, 'xml_url'] == 'https://www.bcn.cl/historiadelaley/obtienearchivo?id=1'
+    assert df.loc[0, 'document_uri'] == 'http://datos.bcn.cl/recurso/cl/documento/1'
     assert df.loc[0, 'akn_url'] == 'http://datos.bcn.cl/recurso/cl/documento/1.xml'
     assert df.loc[0, 'law_title'] == 'Norma'
     assert df.loc[0, 'law_excerpt'] == 'Resumen'

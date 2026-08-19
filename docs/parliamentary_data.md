@@ -129,18 +129,29 @@ data_normalized = normalize_speech_content(
             "role": "Ministra del Trabajo y Previsión Social",
         },
         "MARCEL": {
-            "speaker": "Mario Marcel",
-            "speaker_id": "PersonaExt2",
-            "speaker_href": "https://es.wikipedia.org/wiki/Mario_Marcel",
+            "speaker": "Mario Marcel Cullell",
+            "speaker_href": "http://datos.bcn.cl/recurso/persona/4216",
             "role": "Ministro de Hacienda",
         },
-        "CIFUENTES": {"speaker_id": "per0"},
-        "GARCIA": {"speaker_id": "PersonaAut9"},
+        "CIFUENTES": {
+            "speaker_href": "http://datos.bcn.cl/recurso/persona/5200"
+        },
+    },
+    document_speaker_overrides={
+        "http://datos.bcn.cl/recurso/cl/documento/706982": {
+            "GARCIA": {
+                "speaker_href": "http://datos.bcn.cl/recurso/persona/279"
+            }
+        }
     },
 )
 
 parliamentarians = build_parliamentarian_table(data_normalized)
 ```
+
+No se deben reutilizar `perN`/`PersonaAutN` entre documentos. El cruce estable
+para consultar y unir información parlamentaria es `speaker_href` (y su
+`person_id` numérico); el ID local solo conserva trazabilidad dentro de su AKN.
 
 La función muestra una barra de progreso textual por defecto. Si estás en un
 contexto donde no quieres salida progresiva, usa `show_progress=False`.

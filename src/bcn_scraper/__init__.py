@@ -9,9 +9,15 @@ from .akoma_ntoso import (
 )
 from .akoma_speech import (
     add_speech_content,
+    build_corpus_person_registry,
+    collect_akn_person_identities,
     collect_unlabeled_speaker_candidates,
     extract_speech_from_akn,
     normalize_speech_content,
+)
+from .history_speech import (
+    add_history_speech_content,
+    extract_speech_from_history_xml,
 )
 from .historia_client import HistoriaClient, HistoriaXmlDownload
 from .historia_lookup import HistoriaLookup, HistoriaSearchResult
@@ -39,6 +45,10 @@ from .speech_dataframe import (
     build_speech_analysis_dataframe,
     flatten_speech_content,
 )
+from .speech_quality import (
+    build_speech_quality_report,
+    validate_speech_quality_report,
+)
 from .wrapper import historia_dataframe_from_ley_o_boletin
 
 __all__ = [
@@ -50,8 +60,12 @@ __all__ = [
     "fetch_akoma_ntoso",
     "is_retryable_akn_error",
     "add_speech_content",
+    "add_history_speech_content",
+    "build_corpus_person_registry",
+    "collect_akn_person_identities",
     "collect_unlabeled_speaker_candidates",
     "extract_speech_from_akn",
+    "extract_speech_from_history_xml",
     "normalize_speech_content",
     "HistoriaLookup",
     "HistoriaSearchResult",
@@ -75,6 +89,8 @@ __all__ = [
     "rdf_json_url",
     "build_speech_analysis_dataframe",
     "flatten_speech_content",
+    "build_speech_quality_report",
+    "validate_speech_quality_report",
     "historia_dataframe_from_ley_o_boletin",
     "HistoriaXmlDownload",
 ]

@@ -14,7 +14,7 @@ Funciones auxiliares para convertir XML de Historia de la Ley en DataFrame.
   - Convierte el XML en un DataFrame de trámites reglamentarios.
   - Extrae `date` desde el atributo `fecha` del HTML embebido.
   - Usa `xml_url` para registrar la URL real desde la que se descargó el XML.
-  - Extrae `uriDocumento` desde el HTML embebido y construye `akn_url`.
+  - Extrae y persiste `uriDocumento` como `document_uri`, y construye `akn_url`.
   - Si `clean_text=True`, rellena `txt_content`; si no, deja la columna vacía.
 - `historia_tramite_xmls_to_dataframe(xmls: Iterable[bytes], clean_text: bool = False, bcn_url: str = "", xml_urls: Optional[Iterable[str]] = None)`
   - Convierte una lista de XMLs individuales en un único DataFrame.
@@ -30,12 +30,13 @@ El DataFrame usa nombres en inglés y este orden:
 4. `xml_content`: HTML/XML embebido del trámite.
 5. `txt_content`: texto limpio del trámite.
 6. `akn_content`: XML Akoma Ntoso descargado por el wrapper, o `ERROR: ...`.
-7. `xml_url`: URL real usada para descargar el XML de Historia de la Ley.
-8. `akn_url`: URL Akoma Ntoso construida desde `uriDocumento + ".xml"`.
-9. `law_title`: título de la Historia de la Ley.
-10. `law_excerpt`: bajada/resumen de la Historia de la Ley.
-11. `publication_date`: fecha de publicación de la norma.
-12. `bcn_url`: URL de la página Historia de la Ley usada como fuente.
+7. `document_uri`: identificador estable `uriDocumento` de BCN.
+8. `xml_url`: URL real usada para descargar el XML de Historia de la Ley.
+9. `akn_url`: URL Akoma Ntoso construida desde `uriDocumento + ".xml"`.
+10. `law_title`: título de la Historia de la Ley.
+11. `law_excerpt`: bajada/resumen de la Historia de la Ley.
+12. `publication_date`: fecha de publicación de la norma.
+13. `bcn_url`: URL de la página Historia de la Ley usada como fuente.
 
 ## Dependencias
 - Requiere `pandas`.

@@ -203,6 +203,10 @@ def test_flatten_speech_content_defaults_to_discursive_rows_only():
     assert first["has_raw_content"] == True
     assert first["has_discarded_preamble"] == True
     assert first["content_status"] == "ok"
+    assert first["speaker_id"] == "PersonaBCN2362"
+    assert first["speaker_bcn_id"] == "2362"
+    assert first["speaker_local_id"] == "per1"
+    assert first["utterance_id"].startswith("utt_")
 
     interruption = flat[flat["participation_id"] == "p3"].iloc[0]
     assert interruption["section_name"] == "Subdebate"
@@ -235,6 +239,13 @@ def test_flatten_speech_content_optional_debug_rows_and_json_input():
     assert event["speaker_id"] is None
     assert event["speaker_href"] is None
 
+    discursive = flatten_speech_content(source_df(as_json=True))
+    shared = flat.loc[flat["participation_id"].eq("p1"), "utterance_id"].iloc[0]
+    assert shared == discursive.loc[
+        discursive["participation_id"].eq("p1"), "utterance_id"
+    ].iloc[0]
+    assert flat["utterance_id"].is_unique
+
     unresolved = flat[flat["participation_id"] == "u1"].iloc[0]
     assert unresolved["kind"] == "unlabeled_text"
     assert unresolved["content_status"] == "unresolved"
@@ -252,6 +263,8 @@ def test_build_speech_analysis_dataframe_merges_parliamentarians_without_duplica
     assert matched["name"] == "Ximena Rincón González"
     assert matched["gender"] == "mujer"
     assert matched["current_party"] == "Partido Demócratas Chile"
+    assert matched["speaker_id"] == "PersonaBCN2362"
+    assert matched["speaker_local_id"] == "per1"
 
     external = analysis[analysis["participation_id"] == "p2"].iloc[0]
     assert external["speaker_href"] == WIKI_PERSON
@@ -264,6 +277,43 @@ def test_build_speech_analysis_dataframe_merges_parliamentarians_without_duplica
     assert missing_href["speaker_data_status"] == "missing_href"
     assert missing_href["speaker_href"] is None
     assert pd.isna(missing_href["person_id"])
+
+
+def test_build_speech_analysis_dataframe_keeps_document_qualified_local_id_history():
+    identity_audit = pd.DataFrame([
+        {
+            "document_uri": "doc:previous-a",
+            "local_speaker_id": "PersonaAut9",
+            "speaker_href": BCN_PERSON,
+        },
+        {
+            "document_uri": "doc:previous-b",
+            "local_speaker_id": "per8",
+            "speaker_href": BCN_PERSON,
+        },
+    ])
+
+    analysis = build_speech_analysis_dataframe(
+        source_df(),
+        parliamentarians=parliamentarians_df(),
+        identity_audit=identity_audit,
+    )
+
+    matched = analysis[analysis["participation_id"] == "p1"].iloc[0]
+    assert matched["speaker_id"] == "PersonaBCN2362"
+    assert matched["speaker_bcn_id"] == "2362"
+    assert matched["speaker_local_id"] == "per1"
+    assert matched["speaker_local_ids"] == ["PersonaAut9", "per1", "per8"]
+    assert matched["speaker_local_refs"] == [
+        "doc:previous-a#PersonaAut9",
+        "doc:previous-b#per8",
+        "http://datos.bcn.cl/recurso/documento/1#per1",
+    ]
+
+    external = analysis[analysis["participation_id"] == "p2"].iloc[0]
+    assert external["speaker_id"] == "PersonaExt1"
+    assert external["speaker_bcn_id"] is None
+    assert external["speaker_local_ids"] == ["PersonaExt1"]
 
 
 def test_build_speech_analysis_dataframe_marks_not_merged_without_parliamentarians():

@@ -22,19 +22,34 @@ del esquema BCN.
   - Por defecto deja diccionarios Python en la columna para facilitar el
     procesamiento posterior. Con `as_json=True` serializa como JSON string para
     guardar en CSV/Parquet.
-- `normalize_speech_content(df, source_col: str = "speech_content", output_col: str = "speech_content", external_speakers=None, split_unlabeled: bool = True, clean_labeled: bool = True, split_transcription_events: bool = True, as_json: bool = False)`
+- `normalize_speech_content(df, source_col: str = "speech_content", output_col: str = "speech_content", external_speakers=None, document_speaker_overrides=None, split_unlabeled: bool = True, clean_labeled: bool = True, split_transcription_events: bool = True, as_json: bool = False)`
   - Segunda capa analitica sobre `speech_content`.
   - Divide bloques `unlabeled_text` cuando detecta marcadores de habla con regex.
   - Crea pseudo-participaciones con `source_kind = "unlabeled_text"` e
     `is_labeled = False`.
   - Permite pasar metadata manual para speakers externos o no etiquetados.
+  - `document_speaker_overrides` permite usar IDs AKN locales a cada documento;
+    acepta claves por `document_uri`, `akn_url` o `title` y tiene precedencia
+    sobre el registro general.
+  - Sin override, resuelve automáticamente contra personas AKN solo cuando
+    apellido y calificadores como `don Guillermo` producen una identidad única.
+    Una coincidencia ambigua permanece `regex`.
 - Si `clean_labeled=True`, limpia preambulos procedimentales dentro de
     participaciones etiquetadas y separa interrupciones internas.
   - Si `split_transcription_events=True`, separa eventos independientes como
     aplausos o manifestaciones.
 - `collect_unlabeled_speaker_candidates(df, source_col: str = "speech_content", external_speakers=None, as_dataframe: bool = True)`
-  - Lista speakers detectados por regex en contenido no etiquetado.
-  - Sirve para iterar sobre el diccionario manual de desambiguacion.
+  - Lista speakers detectados por regex tanto antes como despues de normalizar.
+  - Combina el diccionario manual con la identidad observada en las
+    participaciones normalizadas, por lo que permite medir el avance real.
+  - `identity_status` distingue `resolved`, `regex_only`, `unresolved` y
+    `conflict`; los pendientes se obtienen filtrando los valores distintos de
+    `resolved`.
+  - `has_multiple_resolved_identities` indica que un mismo apellido corresponde
+    legítimamente a personas diferentes según documento u ocurrencia; no se
+    clasifica como conflicto si todos los hrefs están resueltos.
+  - `metadata_status` indica si nombre, ID, URL y rol están completos, o usa
+    `multiple_resolved` para esos apellidos compartidos.
   - Incluye contexto de la primera aparicion: `first_title`, `first_date`,
     `first_akn_url`, `first_xml_url`, ademas de una lista `documents`.
 
@@ -60,15 +75,23 @@ df = normalize_speech_content(
             "role": "Ministro de Hacienda",
         },
         "GARCIA": {
-            "speaker_id": "PersonaAut9"
+            "speaker_href": "http://datos.bcn.cl/recurso/persona/279"
         },
     },
 )
 ```
 
-Si el diccionario entrega solo un `speaker_id` que existe en `metadata.persons`
-del AKN, `normalize_speech_content` completa `speaker` y `speaker_href` desde la
-metadata oficial.
+Los `perN` y `PersonaAutN` son IDs locales a un documento AKN y no deben usarse
+como claves corpus-globales. Si el diccionario entrega un `speaker_href` de
+Persona BCN, `normalize_speech_content` busca ese recurso y recupera el ID local
+correcto dentro de cada AKN. Para homónimos que cambian de persona según la
+sesión, se debe usar `document_speaker_overrides`.
+
+La resolución automática de un apellido aislado no se hace contra referencias
+AKN generales, porque estas incluyen personas meramente mencionadas. En un
+fallback construido desde un registro explícito del corpus, el nombre completo
+del preámbulo «Tiene la palabra…» permite desambiguar ocurrencias como Jaime y
+Cristián Araya.
 
 ## Esquema MVP
 El JSON usa listas ordenadas en vez de claves `project_n` o `participation_n`.
@@ -123,7 +146,7 @@ de habla se transforman en `participation` con:
 - `speaker_id`: proviene del diccionario manual o se genera como `PersonaExtN`.
 - `speaker`: proviene del diccionario manual o del marcador detectado.
 - `speaker_href`: opcional, proviene del diccionario manual.
-- `speaker_resolution_status`: `user_provided` o `regex`.
+- `speaker_resolution_status`: `user_provided`, `akn_unique` o `regex`.
 - `speaker_marker`: parrafo marcador, por ejemplo `La señora JARA (...).-`.
 - `discarded_preamble`: parrafos procedimentales previos al marcador.
 - `raw_content`: contenido original, incluyendo el marcador.
@@ -147,6 +170,11 @@ Las interrupciones dentro de participaciones etiquetadas quedan como
 Los eventos de transcripcion tambien se separan dentro de participaciones
 etiquetadas. Si un evento como `(Aplausos)` corta una intervencion, el discurso
 posterior se conserva como otra participacion del mismo speaker.
+
+Las indicaciones escenicas entre parentesis, `Hablan varios...` y separadores
+documentales como `-o-` quedan como `transcription_event`; no se incluyen en el
+dataframe discursivo por defecto. Los calificadores de nombre `don`/`doña` se
+usan para desambiguar y no se guardan erróneamente como roles.
 
 Las votaciones extraen:
 - `content`: parrafos/summary de la votacion.
