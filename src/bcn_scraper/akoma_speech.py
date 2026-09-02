@@ -582,9 +582,40 @@ def parse_debate_body(root: ET.Element, metadata: Dict[str, Dict[str, Dict[str, 
         elif tag == "debateSection":
             section_name = attr(child, "name")
             if section_name == "Cuenta":
+                projects_inside_tables = set()
                 for nested in child.iter():
                     if nested is not child and local_name(nested.tag) == "debateSection" and attr(nested, "name") == "Tabla":
                         output["point_of_order"].append(parse_point_of_order(nested, metadata))
+                        projects_inside_tables.update(
+                            attr(descendant, "id")
+                            for descendant in nested.iter()
+                            if descendant is not nested and is_project_section(descendant)
+                        )
+
+                # Some Chamber AKN documents put ProyectoDeLey sections directly
+                # under Cuenta, without the intermediate Tabla used by older files.
+                # Keep TextoDebate under Cuenta out of the bill corpus, but retain
+                # every explicitly identified bill/resolution project.
+                for nested in child.iter():
+                    if nested is child or local_name(nested.tag) != "debateSection":
+                        continue
+                    nested_id = attr(nested, "id")
+                    nested_name = attr(nested, "name")
+                    is_explicit_project = (
+                        nested_name in {"ProyectoDeLey", "ProyectoDeResolucion"}
+                        or bool(attr(nested, "uriProyectoLey"))
+                    )
+                    if not is_explicit_project or nested_id in projects_inside_tables:
+                        continue
+                    output["point_of_order"].append({
+                        "id": None,
+                        "kind": "point_of_order",
+                        "section_name": "implicit_cuenta",
+                        "title": "",
+                        "projects": [parse_project(nested, metadata)],
+                        "incidents": [],
+                        "other_sections": [],
+                    })
                 continue
             if section_name == "Tabla":
                 output["point_of_order"].append(parse_point_of_order(child, metadata))

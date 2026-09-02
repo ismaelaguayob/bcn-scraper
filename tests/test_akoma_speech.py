@@ -71,6 +71,52 @@ def test_extract_speech_handles_tabla_inside_cuenta_as_point_of_order():
     assert len([item for item in point_of_order["projects"][0]["items"] if item["kind"] == "participation"]) >= 20
 
 
+def test_extract_speech_handles_projects_directly_inside_cuenta():
+    akn = """\
+<akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0"
+             xmlns:bcn="http://datos.bcn.cl">
+  <debate>
+    <meta>
+      <references>
+        <TLCReference id="pl1" showAs="15625-13"
+                      href="http://datos.bcn.cl/recurso/cl/proyecto-de-ley/15625-13" />
+        <TLCPerson id="per1" showAs="diputada de prueba"
+                   href="http://datos.bcn.cl/recurso/persona/1" />
+      </references>
+    </meta>
+    <debateBody>
+      <debateSection name="Cuenta" id="cuenta1">
+        <debateSection name="TextoDebate" id="texto-cuenta">
+          <p>Texto general de la Cuenta que no corresponde a un proyecto.</p>
+        </debateSection>
+        <debateSection name="ProyectoDeLey" id="proyecto1"
+                       bcn:uriProyectoLey="#pl1">
+          <heading>MODIFICACIÓN DE LA LEY DE PENSIONES</heading>
+          <debateSection name="Participacion" id="participacion1"
+                         refersTo="#per1">
+            <p>La señora DIPUTADA DE PRUEBA.-</p>
+            <p>Intervención del proyecto previsional.</p>
+          </debateSection>
+        </debateSection>
+      </debateSection>
+    </debateBody>
+  </debate>
+</akomaNtoso>
+"""
+
+    data = extract_speech_from_akn(akn)
+
+    assert len(data["debate_body"]["point_of_order"]) == 1
+    point_of_order = data["debate_body"]["point_of_order"][0]
+    assert point_of_order["section_name"] == "implicit_cuenta"
+    assert len(point_of_order["projects"]) == 1
+    project = point_of_order["projects"][0]
+    assert project["title"] == "MODIFICACIÓN DE LA LEY DE PENSIONES"
+    assert project["attributes"]["bill_uri"]["show_as"] == "15625-13"
+    assert [item["kind"] for item in project["items"]] == ["participation"]
+    assert project["items"][0]["content"][-1] == "Intervención del proyecto previsional."
+
+
 def test_extract_speech_extracts_address_votation_totals_and_votes():
     data = extract_speech_from_akn(load_akn("665620.xml"))
 
