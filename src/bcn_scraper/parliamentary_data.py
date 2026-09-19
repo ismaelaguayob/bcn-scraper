@@ -7,6 +7,8 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from calendar import monthrange
+from datetime import date as calendar_date, datetime
 from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import pandas as pd
@@ -279,15 +281,109 @@ def extract_militancy_data(
     return output
 
 
+def _militancy_options(date, include_all_militancies, fetch_militancy_dates):
+    """Validate a selector before any network access; preserve legacy defaults."""
+    if date is None:
+        return "current", None, include_all_militancies, fetch_militancy_dates
+    if isinstance(date, (calendar_date, datetime)) and pd.isna(date):
+        raise ValueError("date must not be NaT")
+    if isinstance(date, datetime):
+        date = date.date()
+    if isinstance(date, calendar_date):
+        reference_date = date
+    elif isinstance(date, str):
+        value = date.strip().lower()
+        if value in {"current", "latest"}:
+            return "current", None, include_all_militancies, fetch_militancy_dates
+        if value == "all":
+            return "all", None, True, True
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise ValueError("date must be 'current', 'latest', 'all', or YYYY-MM-DD")
+        reference_date = calendar_date.fromisoformat(value)
+    else:
+        raise TypeError("date must be a date, datetime, ISO date string, 'current', or 'all'")
+    return reference_date.isoformat(), reference_date, True, True
+
+
+def _date_bounds(value):
+    """Bounds for the precision actually supplied by BCN, without imputing a day."""
+    if not isinstance(value, str):
+        return None, None
+    value = value.strip()
+    try:
+        if re.fullmatch(r"\d{4}", value):
+            year = int(value)
+            return calendar_date(year, 1, 1), calendar_date(year, 12, 31)
+        if re.fullmatch(r"\d{4}-\d{2}", value):
+            year, month = map(int, value.split("-"))
+            return calendar_date(year, month, 1), calendar_date(year, month, monthrange(year, month)[1])
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            day = calendar_date.fromisoformat(value)
+            return day, day
+    except ValueError:
+        pass
+    return None, None
+
+
+def _militancy_at_date(militancies, reference_date):
+    """Select only a uniquely established interval (inclusive at both ends)."""
+    possible = []
+    definite = []
+    for item in militancies:
+        start_low, start_high = _date_bounds(item.get("start_date"))
+        if item.get("end_href") or item.get("end_date"):
+            end_low, end_high = _date_bounds(item.get("end_date"))
+        elif item.get("is_current") is True:
+            end_low = end_high = calendar_date.max
+        else:
+            end_low = end_high = None
+        if start_low and end_high and start_low > end_high:
+            # An inconsistent source interval cannot establish a party.
+            possible.append(item)
+            continue
+        if start_low and reference_date < start_low:
+            continue
+        if end_high and reference_date > end_high:
+            continue
+        possible.append(item)
+        if (start_high and end_low and start_high <= reference_date <= end_low
+                and item.get("party_href") and not item.get("error")):
+            definite.append(item)
+    selected = {}
+    if not possible:
+        status = "not_found"
+    elif len(definite) > 1:
+        status = "ambiguous"
+    elif len(possible) == len(definite) == 1:
+        status = "matched"
+        selected = definite[0]
+    else:
+        status = "uncertain_dates"
+    return {
+        "reference_date": reference_date.isoformat(),
+        "party_at_date": selected.get("party"),
+        "party_at_date_href": selected.get("party_href"),
+        "militancy_at_date_href": selected.get("militancy_href"),
+        "militancy_at_date_start_date": selected.get("start_date"),
+        "militancy_at_date_end_date": selected.get("end_date"),
+        "militancy_at_date_status": status,
+        "militancy_at_date_candidates": [item.get("militancy_href") for item in possible],
+    }
+
+
 def parse_parliamentarian_data(
     person_href: str,
     person_data: RDFJson,
     fetcher: CachedRDFJsonFetcher,
     *,
+    date: Optional[Union[str, calendar_date, datetime]] = None,
     include_all_militancies: bool = False,
     fetch_militancy_dates: bool = False,
 ) -> Dict[str, object]:
     """Parse one person RDF/JSON graph and follow selected linked resources."""
+    selection, reference_date, include_all_militancies, fetch_militancy_dates = _militancy_options(
+        date, include_all_militancies, fetch_militancy_dates
+    )
     person_href = canonical_resource_url(person_href)
     props = rdf_subject(person_data, person_href)
     if not props:
@@ -334,9 +430,23 @@ def parse_parliamentarian_data(
         "has_current_militancy": bool(current_militancies),
         "militancy_count": len(militancies),
         "data_status": "ok",
+        "error": None,
     }
+    output["militancy_selection"] = selection
+    output.update({
+        "reference_date": None,
+        "party_at_date": None,
+        "party_at_date_href": None,
+        "militancy_at_date_href": None,
+        "militancy_at_date_start_date": None,
+        "militancy_at_date_end_date": None,
+        "militancy_at_date_status": None,
+        "militancy_at_date_candidates": [],
+    })
     if include_all_militancies:
         output["militancies"] = militancies
+    if reference_date is not None:
+        output.update(_militancy_at_date(militancies, reference_date))
     return output
 
 
@@ -344,13 +454,22 @@ def fetch_parliamentarian_data(
     person_href: str,
     *,
     fetcher: Optional[RDFJsonFetcher] = None,
+    date: Optional[Union[str, calendar_date, datetime]] = None,
     include_all_militancies: bool = False,
     fetch_militancy_dates: bool = False,
     timeout: int = 20,
     max_attempts: int = 1,
     backoff_seconds: float = 2.0,
 ) -> Dict[str, object]:
-    """Fetch BCN data for one parliamentarian/person resource."""
+    """Fetch a person's current affiliation, dated history, or affiliation at date.
+
+    ``date`` accepts None/current/latest (legacy behavior), all (dated history),
+    or an ISO date/date object. Historical results use ``party_at_date`` and a
+    resolution status; ``current_party`` is never relabeled as historical.
+    """
+    selection, reference_date, include_all_militancies, fetch_militancy_dates = _militancy_options(
+        date, include_all_militancies, fetch_militancy_dates
+    )
     if not is_bcn_person_url(person_href):
         return {
             "person_href": person_href,
@@ -378,6 +497,7 @@ def fetch_parliamentarian_data(
         person_url,
         person_data,
         loader,
+        date=date,
         include_all_militancies=include_all_militancies,
         fetch_militancy_dates=fetch_militancy_dates,
     )
@@ -414,15 +534,23 @@ def _print_progress(prefix: str, current: int, total: int, *, enabled: bool) -> 
 
 def parliamentarian_relevant_columns(
     *,
+    date: Optional[Union[str, calendar_date, datetime]] = None,
     include_all_militancies: bool = False,
     fetch_militancy_dates: bool = False,
 ) -> List[str]:
     """Return columns expected for the selected enrichment depth."""
+    selection, reference_date, include_all_militancies, fetch_militancy_dates = _militancy_options(
+        date, include_all_militancies, fetch_militancy_dates
+    )
     columns = list(DEFAULT_RELEVANT_COLUMNS)
     if fetch_militancy_dates:
         columns.extend(["current_militancy_start_date"])
     if include_all_militancies:
         columns.extend(["militancies"])
+    if date is not None:
+        columns.append("militancy_selection")
+    if reference_date is not None:
+        columns.extend(["reference_date", "militancy_at_date_status"])
     return columns
 
 
@@ -430,15 +558,20 @@ def missing_parliamentarian_data_mask(
     df: pd.DataFrame,
     *,
     relevant_columns: Optional[List[str]] = None,
+    date: Optional[Union[str, calendar_date, datetime]] = None,
     include_all_militancies: bool = False,
     fetch_militancy_dates: bool = False,
     person_href_col: str = "person_href",
 ) -> pd.Series:
     """Mark rows with missing relevant BCN person fields."""
+    selection, reference_date, include_all_militancies, fetch_militancy_dates = _militancy_options(
+        date, include_all_militancies, fetch_militancy_dates
+    )
     if person_href_col not in df.columns:
         return pd.Series([False] * len(df), index=df.index)
 
     columns = relevant_columns or parliamentarian_relevant_columns(
+        date=date,
         include_all_militancies=include_all_militancies,
         fetch_militancy_dates=fetch_militancy_dates,
     )
@@ -454,6 +587,31 @@ def missing_parliamentarian_data_mask(
             missing_any = missing_any | df[column].map(_is_missing_value)
     if "data_status" in df.columns:
         missing_any = missing_any | (df["data_status"].fillna("") == "fetch_error")
+    if date is not None:
+        if "militancy_selection" not in df.columns:
+            missing_any = missing_any | mask
+        else:
+            missing_any = missing_any | df["militancy_selection"].ne(selection).fillna(True)
+    if include_all_militancies and "militancies" in df.columns:
+        def incomplete_history(value):
+            if isinstance(value, str):
+                try:
+                    value = json.loads(value)
+                except json.JSONDecodeError:
+                    return True
+            if hasattr(value, "tolist"):
+                value = value.tolist()
+            if not isinstance(value, (list, tuple)):
+                return True
+            for item in value:
+                if not isinstance(item, dict) or item.get("error"):
+                    return True
+                if fetch_militancy_dates:
+                    for href, field in (("start_href", "start_date"), ("end_href", "end_date")):
+                        if item.get(href) and _is_missing_value(item.get(field)):
+                            return True
+            return False
+        missing_any = missing_any | df["militancies"].map(incomplete_history)
     return mask & missing_any
 
 
@@ -569,6 +727,7 @@ def build_parliamentarian_table(
     *,
     source_col: str = "speech_content",
     fetcher: Optional[RDFJsonFetcher] = None,
+    date: Optional[Union[str, calendar_date, datetime]] = None,
     include_all_militancies: bool = False,
     fetch_militancy_dates: bool = False,
     timeout: int = 20,
@@ -576,7 +735,14 @@ def build_parliamentarian_table(
     backoff_seconds: float = 2.0,
     show_progress: bool = True,
 ) -> pd.DataFrame:
-    """Build one row per BCN person who appears as a speech participant."""
+    """Build one row per BCN speaker, applying the same date selector to all.
+
+    Use date="all" for dated histories or date="YYYY-MM-DD" for a historical
+    affiliation. A scalar date applies to every person, not to each speech date.
+    """
+    selection, reference_date, include_all_militancies, fetch_militancy_dates = _militancy_options(
+        date, include_all_militancies, fetch_militancy_dates
+    )
     refs = collect_bcn_speaker_references(df, source_col=source_col, as_dataframe=False)
     loader = CachedRDFJsonFetcher(
         fetcher,
@@ -595,6 +761,7 @@ def build_parliamentarian_table(
                 person_href,
                 person_data,
                 loader,
+                date=date,
                 include_all_militancies=include_all_militancies,
                 fetch_militancy_dates=fetch_militancy_dates,
             )
@@ -616,24 +783,32 @@ def debug_parliamentarian_data_errors(
     person_href_col: str = "person_href",
     relevant_columns: Optional[List[str]] = None,
     fetcher: Optional[RDFJsonFetcher] = None,
+    date: Optional[Union[str, calendar_date, datetime]] = None,
     include_all_militancies: bool = False,
     fetch_militancy_dates: bool = False,
     timeout: int = 60,
     max_attempts: int = 3,
     backoff_seconds: float = 2.0,
     show_progress: bool = True,
+    force: bool = False,
 ) -> pd.DataFrame:
     """Retry only parliamentarian rows with missing relevant fields.
 
     This is a second-pass helper for slow or partial BCN responses. The main
     table builder uses fast defaults; this function focuses only on incomplete
-    rows and can be called with more patient network parameters.
+    rows and can be called with more patient network parameters. ``date`` uses
+    the same selector as fetch_parliamentarian_data; ``force=True`` refreshes
+    every BCN person even if the existing row is complete.
     """
+    selection, reference_date, include_all_militancies, fetch_militancy_dates = _militancy_options(
+        date, include_all_militancies, fetch_militancy_dates
+    )
     result = df.copy()
     if person_href_col not in result.columns:
         return result
 
     columns = relevant_columns or parliamentarian_relevant_columns(
+        date=date,
         include_all_militancies=include_all_militancies,
         fetch_militancy_dates=fetch_militancy_dates,
     )
@@ -644,10 +819,13 @@ def debug_parliamentarian_data_errors(
     mask = missing_parliamentarian_data_mask(
         result,
         relevant_columns=columns,
+        date=date,
         include_all_militancies=include_all_militancies,
         fetch_militancy_dates=fetch_militancy_dates,
         person_href_col=person_href_col,
     )
+    if force:
+        mask = result[person_href_col].map(is_bcn_person_url)
     indexes = list(result.index[mask])
     loader = CachedRDFJsonFetcher(
         fetcher,
@@ -666,6 +844,7 @@ def debug_parliamentarian_data_errors(
                 str(person_href),
                 person_data,
                 loader,
+                date=date,
                 include_all_militancies=include_all_militancies,
                 fetch_militancy_dates=fetch_militancy_dates,
             )
@@ -680,6 +859,12 @@ def debug_parliamentarian_data_errors(
         for key, value in details.items():
             if key not in result.columns:
                 result[key] = None
+            elif (value is not None and not pd.api.types.is_object_dtype(result[key].dtype)
+                  and result[key].isna().all()):
+                # Legacy Parquet exports may store empty date/text/history
+                # columns as float64. Allow their first non-null value before
+                # assigning it: pandas 3 rejects implicit dtype changes.
+                result[key] = result[key].astype(object)
             result.at[idx, key] = value
         _print_progress("BCN parliamentarian debug", position, total, enabled=show_progress and total > 0)
     return result

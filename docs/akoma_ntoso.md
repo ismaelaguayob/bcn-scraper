@@ -17,9 +17,12 @@ BCN (`uriDocumento`).
     completas.
   - Si hay error HTTP, error de red o XML inválido, retorna un string que
     comienza con `ERROR:`.
-- `add_akoma_ntoso_content(df, fetcher=fetch_akoma_ntoso)`
+- `add_akoma_ntoso_content(df, fetcher=fetch_akoma_ntoso, akn_filter=None)`
   - Retorna una copia del DataFrame con `akn_content` poblado a partir de
     `akn_url`.
+  - `akn_filter` recibe cada fila como diccionario y selecciona los trámites
+    que se consultan. Sin filtro consulta todas las filas. Conserva el contenido
+    previo de las filas omitidas y no modifica el DataFrame de entrada.
 - `is_retryable_akn_error(value: str) -> bool`
   - Identifica errores de timeout, handshake o red que conviene reintentar en
     una segunda pasada.

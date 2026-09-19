@@ -220,3 +220,177 @@ esas variables serán usadas en el análisis. Para datasets grandes, conviene:
    incompletas.
 
 Los tests unitarios usan fixtures RDF/JSON sintéticos y no dependen de red.
+
+## Militancia en una fecha, historial y modo actual
+
+`fetch_parliamentarian_data`, `build_parliamentarian_table` y
+`debug_parliamentarian_data_errors` aceptan el parámetro opcional `date`:
+
+| Valor | Resultado |
+| --- | --- |
+| `None`, `"current"` o `"latest"` | Conserva el comportamiento rápido anterior: campos `current_*`, con la regla de militancia sin `hasEnd` y el fallback descrito arriba. |
+| `"all"` | Recupera todas las militancias con sus partidos y fechas de inicio y término en `militancies`. |
+| `"YYYY-MM-DD"`, `datetime.date` o `datetime.datetime` | Recupera el historial fechado y determina la militancia para ese día. En un `datetime` se usa su fecha calendario. |
+
+```python
+# Última militancia según la regla actual del extractor.
+current = fetch_parliamentarian_data(person_href, date="current")
+
+# Historial completo, incluidas sus fechas; no exige otros flags.
+history = fetch_parliamentarian_data(person_href, date="all")
+
+# Militancia en la fecha de un debate, sin alterar current_party.
+at_date = fetch_parliamentarian_data(person_href, date="2022-01-03")
+print(at_date["party_at_date"], at_date["militancy_at_date_status"])
+
+# La misma selección se aplica a todos los participantes de una tabla de discurso.
+parliamentarians = build_parliamentarian_table(data_normalized, date="2022-01-03")
+```
+
+Los flags anteriores `include_all_militancies` y `fetch_militancy_dates` siguen
+funcionando. Una fecha concreta o `"all"` activa ambos. `current_party` conserva
+su significado original incluso al consultar una fecha histórica. Los resultados
+incluyen `militancy_selection` para identificar la consulta aplicada.
+
+Una consulta histórica añade:
+
+- `reference_date`: día consultado, en formato ISO;
+- `party_at_date` y `party_at_date_href`: afiliación establecida para ese día;
+- `militancy_at_date_href`, `militancy_at_date_start_date` y
+  `militancy_at_date_end_date`: procedencia e intervalo de la afiliación;
+- `militancy_at_date_status`: estado de la resolución;
+- `militancy_at_date_candidates`: referencias a los periodos potencialmente compatibles.
+
+Los extremos del intervalo son inclusivos. Si BCN informa solo un año o un mes,
+se conserva esa precisión: la afiliación se asigna únicamente cuando la fecha
+consultada queda inequívocamente dentro del periodo. Un término enlazado cuya
+fecha falta no se interpreta como una militancia abierta.
+
+| Estado | Interpretación |
+| --- | --- |
+| `matched` | Un único periodo confirma la afiliación en esa fecha. |
+| `not_found` | Ningún periodo disponible cubre la fecha; no equivale a afirmar independencia política. |
+| `ambiguous` | Más de un periodo confirma la fecha; no se elige el primero arbitrariamente. |
+| `uncertain_dates` | Las fechas o datos disponibles impiden descartar candidatos o confirmar un intervalo. |
+
+Salvo en `matched`, los campos de partido histórico quedan vacíos. Los campos
+históricos quedan vacíos también en los modos `current` y `all`, que no consultan
+un día concreto. Las cadenas de fecha inválidas se rechazan antes de acceder a red.
+
+La depuración detecta cambios de fecha y fechas enlazadas faltantes en el
+historial, además de las columnas biográficas incompletas. `force=True` permite
+refrescar todas las personas BCN de una tabla existente, conservando sus demás
+columnas:
+
+```python
+updated = debug_parliamentarian_data_errors(
+    parliamentarians, date="all", force=True, timeout=30, max_attempts=2,
+)
+```
+
+### Actualización de tablas existentes desde la terminal
+
+El módulo `bcn_scraper.parliamentarians_cli` lee tablas Parquet con `person_href`.
+Requiere un motor Parquet, como `pyarrow` (ya instalado en el proyecto de tesis).
+Conserva las columnas de procedencia y comparte una caché de recursos entre todos
+los archivos, para evitar descargar repetidamente las mismas personas y partidos.
+
+Desde el directorio de la tesis, el siguiente comando actualiza los historiales
+completos de las tres leyes:
+
+```bash
+uv run python -m bcn_scraper.parliamentarians_cli \
+  --input data/proc_data/ley_*/parliamentarians.parquet \
+  --date all
+```
+
+Antes de sustituir un archivo existente, guarda una copia con fecha UTC y sufijo
+`.bak`. La escritura del nuevo Parquet es atómica. El comando informa los estados
+de extracción y, para consultas históricas, los estados de resolución. Los errores
+de descarga quedan registrados para revisión; no convierten una fecha incierta en
+una afiliación confirmada.
+
+Para una ley y una fecha concreta:
+
+```bash
+uv run python -m bcn_scraper.parliamentarians_cli \
+  --input data/proc_data/ley_21419/parliamentarians.parquet \
+  --date 2022-01-03
+```
+
+Sustituye `--date` por `current` para el enfoque anterior. Una fecha se aplica a
+la tabla completa: si una ley tiene varias sesiones y quieres asignar la militancia
+por sesión, consulta cada fecha por separado o conserva el historial con `all`.
+Este comando actualiza las tablas de parlamentarios; las tablas de intervenciones
+y fragmentos existentes deben regenerarse después mediante su procesamiento habitual.
+
+Una prueba limitada exige una carpeta de salida distinta, para evitar reemplazar
+el corpus completo por una muestra:
+
+```bash
+uv run python -m bcn_scraper.parliamentarians_cli \
+  --input data/proc_data/ley_21419/parliamentarians.parquet \
+  --date all --limit 2 --output-dir /tmp/bcn-parliamentarians-sample
+```
+
+`--limit` limita el número total de filas entre los archivos indicados. Las salidas
+se nombran `<carpeta-origen>_<archivo>.parquet`. `--only-incomplete` reintenta solo
+las filas incompletas o calculadas con otro selector. Los parámetros `--timeout`,
+`--max-attempts`, `--backoff-seconds` y `--no-progress` controlan la consulta y su
+presentación.
+
+### Afiliación en cada discusión: `--date discussions`
+
+Para el análisis de debates, una sola fecha por ley o `first_date` no representan
+las fechas de todas sus discusiones. Este modo lee `speech_df.parquet` junto a cada
+`parliamentarians.parquet`, selecciona las participaciones incluidas en el análisis
+y utiliza la columna `date` de cada `document_uri`.
+
+```bash
+uv run python -m bcn_scraper.parliamentarians_cli \
+  --input data/proc_data/ley_*/parliamentarians.parquet \
+  --date discussions --timeout 60 --max-attempts 3
+```
+
+Genera `parliamentarian_affiliations.parquet` en la carpeta de cada ley, con una fila
+por persona BCN y discusión. Exporta `party_at_date`, su URI, las fechas del período
+seleccionado y `militancy_at_date_status`; no incluye el historial ni `current_party`.
+Los estados `ambiguous`, `uncertain_dates` y `unavailable` conservan la afiliación
+sin asignar cuando no puede establecerse. `not_found` significa que no se encontró
+un intervalo compatible, no que la persona fuese independiente. Los hablantes sin
+identificador BCN no se consultan. Para incorporar esta tabla al corpus, el cruce
+es por `document_uri`, `date` y `person_href`, con validación `many_to_one`.
+
+El modo reutiliza los historiales completos que ya existen en cualquiera de las
+leyes, aunque falten otros datos biográficos. Consulta únicamente personas con
+historial ausente o incompleto. BCN ofrece períodos de militancia: cuando faltan,
+se consultan sus intervalos para resolver las fechas, pero el resultado analítico
+contiene exclusivamente las afiliaciones seleccionadas.
+
+Las nuevas respuestas RDF exitosas se conservan entre ejecuciones en
+`.cache/bcn-scraper/rdf` (configurable con `--cache-dir`). Los errores de red no se
+almacenan. Al repetir el comando se reutilizan esas respuestas y se reintentan los
+recursos pendientes; si una fecha está ausente en una respuesta válida de BCN,
+puede seguir sin resolverse incluso después del reintento. La caché es una
+instantánea local, sin caducidad automática.
+
+En este modo la reutilización es automática; no hace falta `--only-incomplete`.
+En los modos anteriores (`all`, `current` o una fecha fija), la ejecución predeterminada
+sí actualiza todas las filas y la caché de red solo dura esa ejecución;
+`--only-incomplete` limita esas consultas a las filas incompletas.
+
+Las tablas de biografías y discursos originales se conservan. Una salida existente
+se respalda antes de reemplazarla. Este comando no modifica `proc.qmd` ni incorpora
+automáticamente los nuevos campos a `speech_df` o a los chunks.
+
+Para una prueba pequeña sin descargas:
+
+```bash
+uv run python -m bcn_scraper.parliamentarians_cli \
+  --input data/proc_data/ley_21419/parliamentarians.parquet \
+  --date discussions --offline --limit 3 --output-dir /tmp/bcn-affiliations-sample
+```
+
+`--limit` limita el total de pares persona/discusión y exige `--output-dir` para
+preservar la salida completa. `--offline` resuelve solo con los historiales de las
+tablas existentes; no intenta completar datos mediante peticiones RDF.

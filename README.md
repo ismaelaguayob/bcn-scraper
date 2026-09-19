@@ -94,6 +94,7 @@ df = historia_dataframe_from_ley_o_boletin(
     numero_ley="21735",
     clean_text=True,
     fetch_akn=True,
+    akn_filter=lambda tramite: "discusión en sala" in tramite["title"].casefold(),
 )
 
 df = add_speech_content(df)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from time import sleep
-from typing import Callable, Optional
+from typing import Callable, Mapping, Optional
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -98,15 +98,30 @@ def add_akoma_ntoso_content(
     df,
     *,
     fetcher: Callable[[str], str] = fetch_akoma_ntoso,
+    akn_filter: Optional[Callable[[Mapping[str, str]], bool]] = None,
 ):
-    """Return a copy of ``df`` with ``akn_content`` filled from ``akn_url``."""
+    """Fetch AKN for selected tramites, preserving every row and its metadata.
+
+    ``akn_filter`` receives each tramite as a dictionary and returns whether to
+    fetch its AKN. With no filter, all rows are selected. Unselected rows retain
+    their existing ``akn_content`` (or an empty string if the column is new).
+    """
     result = df.copy()
     if "akn_content" not in result.columns:
         result["akn_content"] = ""
-    if "akn_url" not in result.columns:
+    if "akn_url" not in result.columns or result.empty:
         return result
 
-    result["akn_content"] = result["akn_url"].map(lambda url: fetcher(url) if url else "")
+    selected = (
+        [akn_filter(row) for row in result.to_dict(orient="records")]
+        if akn_filter is not None
+        else slice(None)
+    )
+    result.loc[selected, "akn_content"] = (
+        result.loc[selected, "akn_url"].fillna("").map(
+            lambda url: fetcher(url) if url else ""
+        )
+    )
     return result
 
 

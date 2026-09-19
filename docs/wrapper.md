@@ -7,7 +7,7 @@ Wrapper para resolver el ID de Historia de la Ley a partir de número de ley o
 boletín y devolver un DataFrame con trámites reglamentarios.
 
 ## Funciones
-- `historia_dataframe_from_ley_o_boletin(numero_ley: Optional[str], numero_boletin: Optional[str], clean_text: bool = False, prefer_individual_tramites: bool = True, fetch_akn: bool = False, akn_fetcher=fetch_akoma_ntoso)`
+- `historia_dataframe_from_ley_o_boletin(numero_ley: Optional[str], numero_boletin: Optional[str], clean_text: bool = False, prefer_individual_tramites: bool = True, fetch_akn: bool = False, akn_filter=None, akn_fetcher=fetch_akoma_ntoso)`
   - Usa `HistoriaLookup.search` (advanced para ley/boletín; si falla, lanza error).
   - Por defecto descarga los XML individuales de cada trámite reglamentario con `HistoriaClient.fetch_tramite_xml_downloads`.
   - Si no hay payloads individuales, usa el XML agregado de `HistoriaClient.fetch_historia_xml_download`.
@@ -15,6 +15,12 @@ boletín y devolver un DataFrame con trámites reglamentarios.
   - Guarda en `xml_url` la URL real de descarga del XML de Historia de la Ley.
   - Construye `akn_url` desde `uriDocumento` agregando `.xml`.
   - Si `fetch_akn=True`, descarga Akoma Ntoso y rellena `akn_content`.
+  - `akn_filter` recibe un diccionario por trámite y devuelve `True` para los
+    trámites cuyo AKN se necesita. Permite seleccionar por `title`, `document_uri`
+    u otra columna. No elimina filas ni evita descargar el XML de Historia.
+  - Sin filtro se descarga todo el AKN; con `fetch_akn=False` no se consulta AKN,
+    aunque se entregue un filtro. En las filas no seleccionadas, `akn_content`
+    permanece vacío.
   - Retorna el DataFrame con columnas estandarizadas en inglés.
 
 ## Notas
@@ -30,3 +36,21 @@ boletín y devolver un DataFrame con trámites reglamentarios.
   handshakes o errores de red con parámetros más agresivos.
 - BCN no tiene AKN usable para todos los documentos; algunos endpoints devuelven
   HTTP 500 o contenido no XML como `{"status":"error"}`.
+
+## AKN solo para discusiones en Sala
+
+```python
+from bcn_scraper import historia_dataframe_from_ley_o_boletin
+
+historia = historia_dataframe_from_ley_o_boletin(
+    numero_ley="21735",
+    clean_text=True,
+    fetch_akn=True,
+    akn_filter=lambda tramite: "discusión en sala" in tramite["title"].casefold(),
+)
+```
+
+El mismo filtro sirve para cualquier ley. Para seleccionar documentos concretos,
+puedes usar `akn_filter=lambda tramite: tramite["document_uri"] in documentos`.
+Las filas omitidas no generan errores AKN ni solicitudes posteriores al ejecutar
+`debug_akoma_ntoso_errors` sobre el resultado del wrapper.
